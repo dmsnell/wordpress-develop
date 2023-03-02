@@ -80,22 +80,22 @@ class Tests_HtmlApi_wpHtmlTagProcessor extends WP_UnitTestCase {
 	public function data_has_self_closing_flag() {
 		return array(
 			// These should not have a self-closer, and will leave an element un-closed if it's assumed they are self-closing.
-			'Self-closing flag on non-void HTML element' => array( '<div />', true ),
+			'Self-closing flag on non-void HTML element'     => array( '<div />', true ),
 			'No self-closing flag on non-void HTML element' => array( '<div>', false ),
 			// These should not have a self-closer, but are benign when used because the elements are void.
 			'Self-closing flag on void HTML element' => array( '<img />', true ),
-			'No self-closing flag on void HTML element' => array( '<img>', false ),
+			'No self-closing flag on void HTML element'  => array( '<img>', false ),
 			// These should not have a self-closer, but as part of a tag closer they are entirely ignored.
 			'Self-closing flag on tag closer' => array( '</textarea />', true ),
-			'No self-closing flag on tag closer' => array( '</textarea>', false ),
+			'No self-closing flag on tag closer'         => array( '</textarea>', false ),
 			// These can and should have self-closers, and will leave an element un-closed if it's assumed they aren't self-closing.
-			'Self-closing flag on a foreign element' => array( '<circle />', true ),
-			'No self-closing flag on a foreign element' => array( '<circle>', false ),
+			'Self-closing flag on a foreign element'     => array( '<circle />', true ),
+			'No self-closing flag on a foreign element'  => array( '<circle>', false ),
 			// These involve syntax peculiarities.
-			'Self-closing flag after extra spaces' => array( '<div      />', true ),
-			'Self-closing flag after attribute' => array( '<div id=test/>', true ),
-			'Self-closing flag after quoted attribute' => array( '<div id="test"/>', true ),
-			'Self-closing flag after boolean attribute' => array( '<div enabled/>', true ),
+			'Self-closing flag after extra spaces'       => array( '<div      />', true ),
+			'Self-closing flag after attribute'          => array( '<div id=test/>', true ),
+			'Self-closing flag after quoted attribute'   => array( '<div id="test"/>', true ),
+			'Self-closing flag after boolean attribute'  => array( '<div enabled/>', true ),
 		);
 	}
 
