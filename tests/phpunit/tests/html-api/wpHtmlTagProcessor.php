@@ -72,14 +72,25 @@ class Tests_HtmlApi_wpHtmlTagProcessor extends WP_UnitTestCase {
 		}
 	}
 
+	/**
+	 * Data provider. HTML tags which might have a self-closing flag, and an indicator if they do.
+	 *
+	 * @return array[]
+	 */
 	public function data_has_self_closing_flag() {
 		return array(
-			array( '<div />', true ),
-			array( '<div>', false ),
-			array( '<img />', true ),
-			array( '<img>', false ),
-			array( '</textarea>', false ),
-			array( '</textarea />', true ),
+			// These should not have a self-closer, and will leave an element un-closed if it's assumed they are self-closing.
+			'Self-closing flag on non-void HTML element'    => array( '<div />', true ),
+			'No self-closing flag on non-void HTML element' => array( '<div>', false ),
+			// These should not have a self-closer, but are benign when used because the elements are void.
+			'Self-closing flag on void HTML element'        => array( '<img />', true ),
+			'No self-closing flag on void HTML element'     => array( '<img>', false ),
+			// These should not have a self-closer, but as part of a tag closer they are entirely ignored.
+			'Self-closing flag on tag closer'               => array( '</textarea />', true ),
+			'No self-closing flag on tag closer'            => array( '</textarea>', false ),
+			// These can and should have self-closers, and will leave an element un-closed if it's assumed they aren't self-closing.
+			'Self-closing flag on a foreign element'        => array( '<circle />', true ),
+			'No self-closing flag on a foreign element'     => array( '<circle>', false ),
 		);
 	}
 
