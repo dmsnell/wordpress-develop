@@ -1743,6 +1743,14 @@ class WP_HTML_Tag_Processor {
 		return strtoupper( $tag_name );
 	}
 
+	public function has_self_closing_flag() {
+		if ( ! $this->tag_name_starts_at ) {
+			return false;
+		}
+
+		return '/' === $this->html[ $this->tag_ends_at - 1 ];
+	}
+
 	/**
 	 * Indicates if the current tag token is a tag closer.
 	 *

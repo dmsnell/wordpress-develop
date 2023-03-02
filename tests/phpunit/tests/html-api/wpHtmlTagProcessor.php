@@ -52,6 +52,38 @@ class Tests_HtmlApi_wpHtmlTagProcessor extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @ticket NEEDS TICKET
+	 *
+	 * @covers WP_HTML_Tag_Processor::has_self_closing_flag()
+	 *
+	 * @dataProvider data_has_self_closing_flag
+	 *
+	 * @param string $html input HTML whose first tag might contain the self-closing flag `/`.
+	 * @param bool $flag_is_set whether the input HTML's first tag contains the self-closing flag.
+	 */
+	public function test_has_self_closing_flag_matches_input_html( $html, $flag_is_set ) {
+		$p = new WP_HTML_Tag_Processor( $html );
+		$p->next_tag( array( 'tag_closers' => 'visit' ) );
+
+		if ( $flag_is_set ) {
+			$this->assertTrue( $p->has_self_closing_flag(), 'Did not find the self-closing tag when it was present.' );
+		} else {
+			$this->assertFalse( $p->has_self_closing_flag(), 'Found the self-closing tag when it was absent.' );
+		}
+	}
+
+	public function data_has_self_closing_flag() {
+		return array(
+			array( '<div />', true ),
+			array( '<div>', false ),
+			array( '<img />', true ),
+			array( '<img>', false ),
+			array( '</textarea>', false ),
+			array( '</textarea />', true ),
+		);
+	}
+
+	/**
 	 * @ticket 56299
 	 *
 	 * @covers WP_HTML_Tag_Processor::get_attribute
