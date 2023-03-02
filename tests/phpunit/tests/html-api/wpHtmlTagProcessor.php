@@ -91,6 +91,11 @@ class Tests_HtmlApi_wpHtmlTagProcessor extends WP_UnitTestCase {
 			// These can and should have self-closers, and will leave an element un-closed if it's assumed they aren't self-closing.
 			'Self-closing flag on a foreign element'    => array( '<circle />', true ),
 			'No self-closing flag on a foreign element' => array( '<circle>', false ),
+			// These involve syntax peculiarities.
+			'Self-closing flag after extra spaces'      => array( '<div      />', true ),
+			'Self-closing flag after attribute'         => array( '<div id=test/>', true ),
+			'Self-closing flag after quoted attribute'  => array( '<div id="test"/>', true ),
+			'Self-closing flag after boolean attribute' => array( '<div enabled/>', true ),
 		);
 	}
 
