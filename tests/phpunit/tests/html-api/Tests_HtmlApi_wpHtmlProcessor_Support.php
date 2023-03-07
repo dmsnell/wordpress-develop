@@ -6,6 +6,17 @@
  * @subpackage HTML-API
  */
 
+require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-attribute-token.php';
+require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-span.php';
+require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-spec.php';
+require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-text-replacement.php';
+require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-tag-processor.php';
+require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-processor.php';
+
+class WP_UnitTestCase extends PHPUnit\Framework\TestCase {}
+
+function esc_attr( $s ) { return str_replace( [ '<', '>', '"' ], [ '&lt;', '&gt;', '&quot;' ], $s ); }
+
 /**
  * @group html-api
  *
@@ -68,5 +79,29 @@ class Tests_HtmlApi_wpHtmlProcessor_Support extends WP_UnitTestCase {
 		$p = new WP_HTML_Processor( $html );
 
 		$this->assertFalse( $p->next_tag(), "Advanced to '{$p->get_tag()}' even though input HTML isn't supported." );
+	}
+
+	/**
+	 * @dataProvider data_next_sibling
+	 */
+	public function test_finds_next_sibling( $html ) {
+		$p = new WP_HTML_Processor( $html );
+
+		while ( true !== $p->get_attribute( 'start' ) ) {
+			$p->next_tag();
+		}
+		$p->next_sibling();
+
+		$this->assertTrue( $p->get_attribute( 'end' ) );
+	}
+
+	/**
+	 * @return array[]
+	 */
+	public function data_next_sibling() {
+		return array(
+			'Top-level siblings' => array( '<img start><img end><img>' ),
+			'List items'         => array( '<ul><li>One</li><li start>Two</lista><li end>Three</li><li>Four</li></ul>' ),
+		);
 	}
 }
