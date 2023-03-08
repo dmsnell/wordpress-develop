@@ -3306,89 +3306,47 @@ function wp_rel_ugc( $text ) {
  *
  * @since 5.1.0
  * @since 5.6.0 Removed 'noreferrer' relationship.
+ * @since 6.3.0 Rely on the Tag Processor for HTML searching and modification.
  *
  * @param string $text Content that may contain HTML A elements.
  * @return string Converted content.
  */
 function wp_targeted_link_rel( $text ) {
-	// Don't run (more expensive) regex if no links with targets.
+	// Don't run (more expensive) code if no links with targets are possible.
 	if ( stripos( $text, 'target' ) === false || stripos( $text, '<a ' ) === false || is_serialized( $text ) ) {
 		return $text;
 	}
 
-	$script_and_style_regex = '/<(script|style).*?<\/\\1>/si';
-
-	preg_match_all( $script_and_style_regex, $text, $matches );
-	$extra_parts = $matches[0];
-	$html_parts  = preg_split( $script_and_style_regex, $text );
-
-	foreach ( $html_parts as &$part ) {
-		$part = preg_replace_callback( '|<a\s([^>]*target\s*=[^>]*)>|i', 'wp_targeted_link_rel_callback', $part );
-	}
-
-	$text = '';
-	for ( $i = 0; $i < count( $html_parts ); $i++ ) {
-		$text .= $html_parts[ $i ];
-		if ( isset( $extra_parts[ $i ] ) ) {
-			$text .= $extra_parts[ $i ];
+	$p = new WP_HTML_Tag_Processor( $text );
+	while ( $p->next_tag( 'a' ) ) {
+		$target = $p->get_attribute( 'target' );
+		if ( null === $target ) {
+			continue;
 		}
+
+		$rel = $p->get_attribute( 'rel' );
+		$rel = true === $rel ? "" : $rel;
+		$link_text = "rel=\"{$rel}\"";
+
+		/**
+		 * Filters the rel values that are added to links with `target` attribute.
+		 *
+		 * @since 5.1.0
+		 *
+		 * @param string $rel       The rel values.
+		 * @param string $link_html The matched content of the link tag including all HTML attributes.
+		 */
+		$updated_rel = apply_filters( 'wp_targeted_link_rel', 'noopener', $link_text );
+		if ( ! $updated_rel ) {
+			continue;
+		}
+
+		$all_parts = preg_split( '/\s/', "$rel $updated_rel", -1, PREG_SPLIT_NO_EMPTY );
+		$new_rel   = implode( ' ', array_unique( $all_parts ) );
+		$p->set_attribute( 'rel', $new_rel );
 	}
 
-	return $text;
-}
-
-/**
- * Callback to add `rel="noopener"` string to HTML A element.
- *
- * Will not duplicate an existing 'noopener' value to avoid invalidating the HTML.
- *
- * @since 5.1.0
- * @since 5.6.0 Removed 'noreferrer' relationship.
- *
- * @param array $matches Single match.
- * @return string HTML A Element with `rel="noopener"` in addition to any existing values.
- */
-function wp_targeted_link_rel_callback( $matches ) {
-	$link_html          = $matches[1];
-	$original_link_html = $link_html;
-
-	// Consider the HTML escaped if there are no unescaped quotes.
-	$is_escaped = ! preg_match( '/(^|[^\\\\])[\'"]/', $link_html );
-	if ( $is_escaped ) {
-		// Replace only the quotes so that they are parsable by wp_kses_hair(), leave the rest as is.
-		$link_html = preg_replace( '/\\\\([\'"])/', '$1', $link_html );
-	}
-
-	$atts = wp_kses_hair( $link_html, wp_allowed_protocols() );
-
-	/**
-	 * Filters the rel values that are added to links with `target` attribute.
-	 *
-	 * @since 5.1.0
-	 *
-	 * @param string $rel       The rel values.
-	 * @param string $link_html The matched content of the link tag including all HTML attributes.
-	 */
-	$rel = apply_filters( 'wp_targeted_link_rel', 'noopener', $link_html );
-
-	// Return early if no rel values to be added or if no actual target attribute.
-	if ( ! $rel || ! isset( $atts['target'] ) ) {
-		return "<a $original_link_html>";
-	}
-
-	if ( isset( $atts['rel'] ) ) {
-		$all_parts = preg_split( '/\s/', "{$atts['rel']['value']} $rel", -1, PREG_SPLIT_NO_EMPTY );
-		$rel       = implode( ' ', array_unique( $all_parts ) );
-	}
-
-	$atts['rel']['whole'] = 'rel="' . esc_attr( $rel ) . '"';
-	$link_html            = implode( ' ', array_column( $atts, 'whole' ) );
-
-	if ( $is_escaped ) {
-		$link_html = preg_replace( '/[\'"]/', '\\\\$0', $link_html );
-	}
-
-	return "<a $link_html>";
+	return $p->get_updated_html();
 }
 
 /**
