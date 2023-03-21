@@ -135,7 +135,7 @@ class Tests_HtmlApi_wpHtmlProcessor_Support extends WP_UnitTestCase {
 	public function test_finds_next_child( $html ) {
 		$p = $this->html_processor_at_start( $html );
 
-		$p->next_child();
+		$p->first_child();
 		$this->assertTrue( $p->get_attribute( 'end' ), 'Did not find child tag.' );
 	}
 
@@ -152,7 +152,7 @@ class Tests_HtmlApi_wpHtmlProcessor_Support extends WP_UnitTestCase {
 	public function test_finds_no_next_child( $html ) {
 		$p = $this->html_processor_at_start( $html );
 
-		$this->assertFalse( $p->next_child(), 'Did not find child tag.' );
+		$this->assertFalse( $p->first_child(), 'Did not find child tag.' );
 	}
 
 	public function data_no_next_child() {
@@ -190,17 +190,17 @@ HTML
 		);
 
 		$p->next_tag();
-		$p->next_child();
+		$p->first_child();
 		$p->next_sibling();
-		$p->next_child();
+		$p->first_child();
 		$p->next_sibling();
 		$p->next_sibling();
 		$p->next_sibling();
-		$p->next_child();
+		$p->first_child();
 		$p->next_sibling();
-		$p->next_child();
+		$p->first_child();
 		$p->next_sibling();
-		$p->next_child();
+		$p->first_child();
 		$p->next_sibling();
 		$p->next_sibling();
 

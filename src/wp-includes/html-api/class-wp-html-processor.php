@@ -95,7 +95,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		return false;
 	}
 
-	public function next_child() {
+	public function first_child() {
 		if ( false === $this->fully_supported_input || false === $this->ensure_support() ) {
 			return false;
 		}
