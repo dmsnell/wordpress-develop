@@ -130,16 +130,16 @@ class Tests_HtmlApi_wpHtmlProcessor_Support extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @dataProvider data_next_child
+	 * @dataProvider data_first_child
 	 */
-	public function test_finds_next_child( $html ) {
+	public function test_finds_first_child( $html ) {
 		$p = $this->html_processor_at_start( $html );
 
 		$p->first_child();
 		$this->assertTrue( $p->get_attribute( 'end' ), 'Did not find child tag.' );
 	}
 
-	public function data_next_child() {
+	public function data_first_child() {
 		return array(
 			'Leading markup' => array( 'this is not tag content<div start><img end></div>afterwards' ),
 			'Normal nesting' => array( '<ul><li></li><li><p start>text<img end></p></li><li></li></ul>' ),
@@ -147,15 +147,15 @@ class Tests_HtmlApi_wpHtmlProcessor_Support extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @dataProvider data_no_next_child
+	 * @dataProvider data_no_first_child
 	 */
-	public function test_finds_no_next_child( $html ) {
+	public function test_finds_no_first_child( $html ) {
 		$p = $this->html_processor_at_start( $html );
 
 		$this->assertFalse( $p->first_child(), 'Did not find child tag.' );
 	}
 
-	public function data_no_next_child() {
+	public function data_no_first_child() {
 		return array(
 			'Leading markup' => array( 'this is not tag content<div start></div><img end>afterwards' ),
 			'Already nested' => array( '<li><li></li><li><p start>text</p><img end></li><li></li></ul>', ),
