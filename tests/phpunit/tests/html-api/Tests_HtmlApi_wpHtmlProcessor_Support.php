@@ -159,6 +159,7 @@ class Tests_HtmlApi_wpHtmlProcessor_Support extends WP_UnitTestCase {
 		return array(
 			'Leading markup' => array( 'this is not tag content<div start></div><img end>afterwards' ),
 			'Already nested' => array( '<li><li></li><li><p start>text</p><img end></li><li></li></ul>', ),
+			'Void element'   => array( '<img start>' ),
 		);
 	}
 
