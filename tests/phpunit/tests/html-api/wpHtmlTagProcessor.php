@@ -52,7 +52,7 @@ class Tests_HtmlApi_wpHtmlTagProcessor extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @ticket 58009 TICKET
+	 * @ticket 58009
 	 *
 	 * @covers WP_HTML_Tag_Processor::has_self_closing_flag()
 	 *
