@@ -13,9 +13,13 @@ require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/cla
 require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-tag-processor.php';
 require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-processor.php';
 
-class WP_UnitTestCase extends PHPUnit\Framework\TestCase {}
+class WP_UnitTestCase extends PHPUnit\Framework\TestCase {
 
-function esc_attr( $s ) { return str_replace( [ '<', '>', '"' ], [ '&lt;', '&gt;', '&quot;' ], $s ); }
+}
+
+function esc_attr( $s ) {
+	return str_replace( array( '<', '>', '"' ), array( '&lt;', '&gt;', '&quot;' ), $s );
+}
 
 /**
  * @group html-api
@@ -53,8 +57,8 @@ class Tests_HtmlApi_wpHtmlProcessor_Support extends WP_UnitTestCase {
 			'Void tags'                                 => array( '<img><br><hr>' ),
 			'Void tags with invalid self-closing flags' => array( '<img /><br/><hr />' ),
 			'Invalid self-closing non-void'              => array( 'This <div/> is (not) empty.</div>' ),
-			'Nested with void tags'                     => array( '<div><p><img>Text<br>More Text</p></div>'),
-			'HTML foreign elements'                     => array( '<svg><circle /></svg>'),
+			'Nested with void tags'                     => array( '<div><p><img>Text<br>More Text</p></div>' ),
+			'HTML foreign elements'                     => array( '<svg><circle /></svg>' )
 		);
 	}
 
@@ -77,8 +81,8 @@ class Tests_HtmlApi_wpHtmlProcessor_Support extends WP_UnitTestCase {
 			'Overlapping tags'                           => array( '<strong><p>Important</strong></p>' ),
 			'Overlapping nested tags'                    => array( '<div><strong><p>Important</strong></p></div>' ),
 			'Invalid self-closing non-void'              => array( 'This <div/> is (not) empty.' ),
-			'Un-closed HTML foreign self-closer'         => array( '<svg><circle></svg>'),
-			'Improperly-closed HTML foreign self-closer' => array( '<svg><circle /></circle></svg>'),
+			'Un-closed HTML foreign self-closer'         => array( '<svg><circle></svg>' ),
+			'Improperly-closed HTML foreign self-closer' => array( '<svg><circle /></circle></svg>' )
 		);
 	}
 
@@ -109,7 +113,7 @@ class Tests_HtmlApi_wpHtmlProcessor_Support extends WP_UnitTestCase {
 			'Leading markup'     => array( 'before<img start><img end><img>' ),
 			'Top-level siblings' => array( '<img start><img end><img>' ),
 			'Nested siblings'    => array( '<ul><li>One</li><li start>Two</li><li end>Three</li><li>Four</li></ul>' ),
-			'Nesting avalanche'  => array( '<img start><ul end><li><div><p><strong><a><img></a></strong></p></div></li></ul><div></div><footer></footer>'),
+			'Nesting avalanche'  => array( '<img start><ul end><li><div><p><strong><a><img></a></strong></p></div></li></ul><div></div><footer></footer>' )
 		);
 	}
 
@@ -125,7 +129,7 @@ class Tests_HtmlApi_wpHtmlProcessor_Support extends WP_UnitTestCase {
 		return array(
 			'Leading markup'        => array( 'before<div><img start></div><img end><img>' ),
 			'No more siblings'      => array( '<ul><li></li><li start></li></ul><ul><li end></li></ul>' ),
-			'Tag-closing avalanche' => array( '<ul><li><div><p><strong><a><img start></a></strong></p></div></li></ul><div end></div><footer></footer>'),
+			'Tag-closing avalanche' => array( '<ul><li><div><p><strong><a><img start></a></strong></p></div></li></ul><div end></div><footer></footer>' )
 		);
 	}
 
@@ -142,7 +146,7 @@ class Tests_HtmlApi_wpHtmlProcessor_Support extends WP_UnitTestCase {
 	public function data_first_child() {
 		return array(
 			'Leading markup' => array( 'this is not tag content<div start><img end></div>afterwards' ),
-			'Normal nesting' => array( '<ul><li></li><li><p start>text<img end></p></li><li></li></ul>' ),
+			'Normal nesting' => array( '<ul><li></li><li><p start>text<img end></p></li><li></li></ul>' )
 		);
 	}
 
@@ -159,7 +163,7 @@ class Tests_HtmlApi_wpHtmlProcessor_Support extends WP_UnitTestCase {
 		return array(
 			'Leading markup' => array( 'this is not tag content<div start></div><img end>afterwards' ),
 			'Already nested' => array( '<li><li></li><li><p start>text</p><img end></li><li></li></ul>', ),
-			'Void element'   => array( '<img start>' ),
+			'Void element'   => array( '<img start>' )
 		);
 	}
 
@@ -223,7 +227,7 @@ HTML
 			'Single tag'   => array( '<div start>', 'text', '</div>' ),
 			'Nested tags'  => array( '<div start>', '<ul><li>One</li><li><strong>Two<img></strong></li></ul>', '</div>' ),
 			'Complex HTML' => array(
-				<<<HTML
+					<<<HTML
 <main>
 	<h2>Things I could be eating right now</h2>
 	<ul>
@@ -234,7 +238,7 @@ HTML
 			<img src="yum.avif">
 			<details start>
 HTML,
-				<<<HTML
+					<<<HTML
 				<summary>Scwarzwälder Kirschtorte</summary>
 				<ul>
 					<li>Flour</li>
@@ -246,7 +250,7 @@ HTML,
 				</ul>
 
 HTML,
-			<<<HTML
+				<<<HTML
 </details>
 		</li>
 	</ul>
@@ -318,7 +322,7 @@ HTML,
 	</ul>
 </main>
 HTML
-			),
+			)
 		);
 	}
 

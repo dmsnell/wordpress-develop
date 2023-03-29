@@ -18,7 +18,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			if ( ! $p->is_tag_closer() ) {
 				$element = WP_HTML_Spec::element_info( $tag_name );
 
-				$self_closes = $element::is_void || ( ! $element::is_html && $p->has_self_closing_flag() );
+				$self_closes = $element::IS_VOID || ( ! $element::IS_HTML && $p->has_self_closing_flag() );
 				if ( ! $self_closes ) {
 					$stack[] = $tag_name;
 				}
@@ -46,7 +46,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		if ( 0 < count( $this->open_elements ) ) {
 			$element = WP_HTML_Spec::element_info( end( $this->open_elements ) );
 			// @TODO: Handle self-closing HTML foreign elements: must convey self-closing flag on stack.
-			if ( $element::is_void ) {
+			if ( $element::IS_VOID ) {
 				array_pop( $this->open_elements );
 			}
 		}
@@ -58,7 +58,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		$tag_name = $this->get_tag();
 		$element = WP_HTML_Spec::element_info( $tag_name );
 
-		$self_closes = $element::is_void || ( ! $element::is_html && $this->has_self_closing_flag() );
+		$self_closes = $element::IS_VOID || ( ! $element::IS_HTML && $this->has_self_closing_flag() );
 		if ( $self_closes ) {
 			$this->open_elements[] = $tag_name;
 			return true;
@@ -137,7 +137,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		}
 
 		$element = WP_HTML_Spec::element_info( $this->get_tag() );
-		if ( $element::is_void || ( ! $element::is_html && $this->has_self_closing_flag() ) ) {
+		if ( $element::IS_VOID || ( ! $element::IS_HTML && $this->has_self_closing_flag() ) ) {
 			return false;
 		}
 
@@ -168,7 +168,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		}
 
 		$element = WP_HTML_Spec::element_info( $this->get_tag() );
-		if ( $element::is_void || ( ! $element::is_html && $this->has_self_closing_flag() ) ) {
+		if ( $element::IS_VOID || ( ! $element::IS_HTML && $this->has_self_closing_flag() ) ) {
 			return false;
 		}
 
@@ -199,7 +199,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		}
 
 		$element = WP_HTML_Spec::element_info( $this->get_tag() );
-		if ( $element::is_void || ( ! $element::is_html && $this->has_self_closing_flag() ) ) {
+		if ( $element::IS_VOID || ( ! $element::IS_HTML && $this->has_self_closing_flag() ) ) {
 			$this->set_bookmark( 'start' );
 			$here = $this->bookmarks['start'];
 			return substr( $this->html, $here->start, $here->end - $here->start + 1 );
@@ -234,7 +234,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 
 		$element = WP_HTML_Spec::element_info( $this->get_tag() );
 		// @TODO: Replace void and self-closing tags.
-		if ( $element::is_void || ( ! $element::is_html && $this->has_self_closing_flag() ) ) {
+		if ( $element::IS_VOID || ( ! $element::IS_HTML && $this->has_self_closing_flag() ) ) {
 			return false;
 		}
 
