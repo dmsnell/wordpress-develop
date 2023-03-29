@@ -6,6 +6,19 @@
  * @subpackage HTML-API
  */
 
+if ( ! class_exists( 'WP_UnitTestCase' ) ) {
+	class WP_UnitTestCase extends PHPUnit\Framework\TestCase {}
+
+	require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-attribute-token.php';
+	require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-span.php';
+//	require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-spec.php';
+	require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-text-replacement.php';
+	require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-tag-processor.php';
+//	require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-processor.php';
+
+	function esc_attr( $s ) { return str_replace( [ '<', '>', '"' ], [ '&lt;', '&gt;', '&quot;' ], $s ); }
+}
+
 /**
  * @group html-api
  *
