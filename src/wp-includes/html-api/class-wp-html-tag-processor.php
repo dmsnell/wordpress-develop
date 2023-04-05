@@ -318,6 +318,16 @@ class WP_HTML_Tag_Processor {
 	private $stop_on_tag_closers;
 
 	/**
+	 * Whether to visit funky comments, e.g. </1>, when walking an input document.
+	 *
+	 * These are funny because they are errors.
+	 *
+	 * @since 6.3.0
+	 * @var bool
+	 */
+	private $stop_on_funky_comments;
+
+	/**
 	 * Holds updated HTML as updates are applied.
 	 *
 	 * Updates and unmodified portions of the input document are
@@ -537,6 +547,18 @@ class WP_HTML_Tag_Processor {
 	 * @var int
 	 */
 	protected $seek_count = 0;
+
+	/**
+	 * @since 6.3.0
+	 * @var string
+	 */
+	private $funky_comment_content = null;
+
+	/**
+	 * @since 6.3.0
+	 * @var int
+	 */
+	private $placeholders = 0;
 
 	/**
 	 * Constructor.
@@ -1161,9 +1183,19 @@ class WP_HTML_Tag_Processor {
 			 * See https://github.com/WordPress/wordpress-develop/pull/4256
 			 */
 			if ( $this->is_closing_tag ) {
-				$closer_at = strpos( $html, '>', $at + 3 );
+				$closer_at = strpos( $html, '>', $at );
 				if ( false === $closer_at ) {
 					return false;
+				}
+
+				if ( $this->stop_on_funky_comments ) {
+					++$at;
+					$this->tag_name_length       = 0;
+					$this->tag_name_starts_at    = $at;
+					$this->bytes_already_parsed  = $closer_at;
+					$this->funky_comment_content = array( $at, $closer_at );
+
+					return true;
 				}
 
 				$at = $closer_at + 1;
@@ -1301,11 +1333,12 @@ class WP_HTML_Tag_Processor {
 	private function after_tag() {
 		$this->class_name_updates_to_attributes_updates();
 		$this->apply_attributes_updates();
-		$this->tag_name_starts_at = null;
-		$this->tag_name_length    = null;
-		$this->tag_ends_at        = null;
-		$this->is_closing_tag     = null;
-		$this->attributes         = array();
+		$this->tag_name_starts_at    = null;
+		$this->tag_name_length       = null;
+		$this->tag_ends_at           = null;
+		$this->is_closing_tag        = null;
+		$this->attributes            = array();
+		$this->funky_comment_content = null;
 	}
 
 	/**
@@ -1552,7 +1585,7 @@ class WP_HTML_Tag_Processor {
 		if ( ! array_key_exists( $bookmark_name, $this->bookmarks ) ) {
 			_doing_it_wrong(
 				__METHOD__,
-				__( 'Unknown bookmark name.' ),
+				__( 'Unknown bookmark name.' . ' ' . $bookmark_name ),
 				'6.2.0'
 			);
 			return false;
@@ -1575,6 +1608,14 @@ class WP_HTML_Tag_Processor {
 		$this->bytes_already_copied = $this->bytes_already_parsed;
 		$this->output_buffer        = substr( $this->html, 0, $this->bytes_already_copied );
 		return $this->next_tag( array( 'tag_closers' => 'visit' ) );
+	}
+
+	public function rewind() {
+//		$this->get_updated_html();
+		$this->after_tag();
+		$this->bytes_already_parsed = 0;
+		$this->bytes_already_copied = 0;
+		$this->output_buffer        = '';
 	}
 
 	/**
@@ -1858,6 +1899,13 @@ class WP_HTML_Tag_Processor {
 	}
 
 	/**
+	 * @since 6.3.0
+	 */
+	public function is_funky_comment() {
+		return null !== $this->funky_comment_content;
+	}
+
+	/**
 	 * Updates or creates a new attribute on the currently matched tag with the passed value.
 	 *
 	 * For boolean attributes special handling is provided:
@@ -2113,6 +2161,13 @@ class WP_HTML_Tag_Processor {
 		return $this->get_updated_html();
 	}
 
+	public function get_funky_content() {
+		if ( $this->funky_comment_content !== null ) {
+			list( $start, $end ) = $this->funky_comment_content;
+			return substr( $this->html, $start, $end - $start );
+		}
+	}
+
 	/**
 	 * Returns the string representation of the HTML Tag Processor.
 	 *
@@ -2204,11 +2259,12 @@ class WP_HTML_Tag_Processor {
 			return;
 		}
 
-		$this->last_query          = $query;
-		$this->sought_tag_name     = null;
-		$this->sought_class_name   = null;
-		$this->sought_match_offset = 1;
-		$this->stop_on_tag_closers = false;
+		$this->last_query             = $query;
+		$this->sought_tag_name        = null;
+		$this->sought_class_name      = null;
+		$this->sought_match_offset    = 1;
+		$this->stop_on_tag_closers    = false;
+		$this->stop_on_funky_comments = false;
 
 		// A single string value means "find the tag of this name".
 		if ( is_string( $query ) ) {
@@ -2246,8 +2302,94 @@ class WP_HTML_Tag_Processor {
 		if ( isset( $query['tag_closers'] ) ) {
 			$this->stop_on_tag_closers = 'visit' === $query['tag_closers'];
 		}
+
+		if ( isset( $query['funky_comments'] ) ) {
+			$this->stop_on_funky_comments = 'visit' === $query['funky_comments'];
+		}
 	}
 
+	public function declarative_match( $pattern_html ) {
+		$this->placeholders = 0;
+		while ( $this->placeholders > 0 ) {
+			$this->release_bookmark( "__placeholder_{$this->placeholders}" );
+			$this->placeholders--;
+		}
+		$pattern = new WP_HTML_Tag_Processor( $pattern_html );
+		$visit_everything = array( 'tag_closers' => 'visit', 'funky_comments' => 'visit' );
+
+		$same_thing = function ( WP_HTML_Tag_Processor $pattern, WP_HTML_Tag_Processor $test ) {
+			if ( $pattern->is_funky_comment() ) {
+				$this->placeholders++;
+				$this->set_bookmark( "__placeholder_{$this->placeholders}" );
+				return true;
+			}
+
+			if ( ! (
+				$pattern->get_tag() === $test->get_tag() &&
+				$pattern->is_tag_closer() === $test->is_tag_closer() &&
+				$pattern->is_funky_comment() === $test->is_funky_comment()
+			) ) {
+				return false;
+			}
+
+			$attribute_constraints = $pattern->get_attribute_names_with_prefix( '' );
+			if ( null === $attribute_constraints ) {
+				return true;
+			}
+
+			foreach ( $attribute_constraints as $name ) {
+				if ( $pattern->get_attribute( $name ) !== $test->get_attribute( $name ) ) {
+					return false;
+				}
+			}
+
+			return true;
+		};
+
+		step_one: // find the next spot the patterns start the same.
+		if ( ! $pattern->next_tag( $visit_everything ) ) {
+			return false;
+		}
+
+		while ( $this->placeholders > 0 ) {
+			$this->release_bookmark( "__placeholder_{$this->placeholders}" );
+			$this->placeholders--;
+		}
+		while ( $this->next_tag( $visit_everything ) ) {
+			if ( $same_thing( $pattern, $this ) ) {
+				goto step_two;
+			}
+		}
+		return false;
+
+		step_two: // see if the subsequence tokens in the pattern and test match.
+		$this->set_bookmark( 'match_start' );
+		if ( ! $pattern->next_tag( $visit_everything ) ) {
+			$this->release_bookmark( 'match_start' );
+			return true;
+		}
+
+		while ( true ) {
+			if ( ! $this->next_tag( $visit_everything ) ) {
+				$this->release_bookmark( 'match_start' );
+				return false;
+			}
+
+			if ( ! $same_thing( $pattern, $this ) ) {
+				$pattern->rewind();
+				goto step_one;
+			}
+
+			if ( ! $pattern->next_tag( $visit_everything ) ) {
+				break;
+			}
+		}
+
+		$this->set_bookmark( 'match_end' );
+		$this->seek( 'match_start' );
+		$this->release_bookmark( 'match_start' );
+		return true;
+	}
 
 	/**
 	 * Checks whether a given tag and its attributes match the search criteria.
@@ -2257,6 +2399,10 @@ class WP_HTML_Tag_Processor {
 	 * @return boolean Whether the given tag and its attribute match the search criteria.
 	 */
 	private function matches() {
+		if ( null !== $this->funky_comment_content && $this->stop_on_funky_comments ) {
+			return true;
+		}
+
 		if ( $this->is_closing_tag && ! $this->stop_on_tag_closers ) {
 			return false;
 		}

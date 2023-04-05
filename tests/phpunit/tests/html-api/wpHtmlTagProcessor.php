@@ -17,6 +17,10 @@ if ( ! class_exists( 'WP_UnitTestCase' ) ) {
 //	require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-processor.php';
 
 	function esc_attr( $s ) { return str_replace( [ '<', '>', '"' ], [ '&lt;', '&gt;', '&quot;' ], $s ); }
+	function __( $s ) { return $s; }
+	function _doing_it_wrong( ...$args ) {
+		var_dump( $args );
+	}
 }
 
 /**
@@ -2246,5 +2250,98 @@ HTML
 				'expected' => '<hr class="firstTag" foo="bar" id a  =5><span class="secondTag">test</span>',
 			),
 		);
+	}
+
+	/**
+	 * @dataProvider data_funky_comments
+	 */
+	public function test_stops_at_funky_comments( $html, $content ) {
+		$p = new WP_HTML_Tag_Processor( $html );
+
+		$this->assertTrue( $p->next_tag( array( 'funky_comments' => 'visit' ) ) );
+		$this->assertEquals( $content, $p->get_funky_content() );
+	}
+
+	public function data_funky_comments() {
+		return array(
+			'Isolated comment'   => array( '</1>', '1' ),
+			'Inside text'        => array( 'Before</1>After', '1' ),
+			'%name syntax'       => array( 'Today is </%day>.', '%day' ),
+			'With spaces inside' => array( 'What </$variable is this>?', '$variable is this' ),
+		);
+	}
+
+	/**
+	 * @dataProvider data_declarative_patterns
+	 */
+	public function test_matches_declarative_pattern( $pattern, $html, $matches ) {
+		$p = new WP_HTML_Tag_Processor( $html );
+
+		if ( $matches ) {
+			$this->assertTrue( $p->declarative_match( $pattern ) );
+		} else {
+			$this->assertFalse( $p->declarative_match( $pattern ) );
+		}
+	}
+
+	public function data_declarative_patterns() {
+		return array(
+			'Single tag'                 => array( '<div>', '<div>', true ),
+			'^Single tag'                => array( '<div>', '<img>', false ),
+			'Wrapped image'              => array( '<div><img></div>', '<div><img></div>', true ),
+			'Wrapped image w/attributes' => array( '<div><img></div>', '<div id="14"><img src="hallumi" inert></div>', true ),
+			'Prefix before match'        => array( '<li><img></li>', '<main><h1>Stuff!</h1><ul><li><img></li></ul></main>', true ),
+			'Pattern with attribute'     => array( '<li is-active><img></li>', '<li is-active><img></li>', true ),
+			'^Pattern with attribute'    => array( '<li is-active><img></li>', '<li><img></li>', false ),
+			'Pattern with attributes'    => array( '<li is-active class="slick"><img></li>', '<li class="slick" is-active><img></li>', true ),
+			'^Pattern with attributes'   => array( '<li is-active class="slick"><img></li>', '<li id="slick" is-active><img></li>', false ),
+			'^Pattern with attributes 2' => array( '<li is-active class="slick"><img></li>', '<li class="wicket" is-active><img></li>', false ),
+			'Test with attributes'       => array( '<li is-active><img></li>', '<li id="5" is-funky=maybe style=\'color: red;\' is-active class="test-class bright"><img></li>', true ),
+			'^Test with attributes'      => array( '<li is-active><img></li>', '<li id="5" is-funky=maybe style=\'color: red;\' isactive class="test-class bright"><img></li>', false ),
+			'Attribute with value'       => array( '<input disabled>', '<input type="text"><input><input disabled><input value="5">', true ),
+			'Attribute with text'        => array( '<input id="5">', '<input type="text"><input><input id=5><input disabled><input value="5">', true ),
+			'^Attribute with value'      => array( '<input disabled>', '<input type="text"><input><input disable><input value="5">', false ),
+			'Wildcard'                   => array( '<hgroup></1></2></hgroup>', '<hgroup><h1>Important</h1></hgroup>', true ),
+			'^Wildcard'                  => array( '<hgroup></1></2></hgroup>', '<hgroup><img></hgroup>', false ),
+			'Wildcard attributes'        => array( '</1 aria-label="placeholder">', '<div><p><strong>This</strong> is <em aria-label="placeholder">really</em> cool!</p></div>', true ),
+		);
+	}
+
+	public function test_declarative_match_pauses_at_start_of_match() {
+		$p = new WP_HTML_Tag_Processor( '<main><h1>Stuff!</h1><ul><li pick-me><img></li></ul></main>' );
+
+		$this->assertTrue( $p->declarative_match( '<li><img></li>' ) );
+		$this->assertTrue( $p->get_attribute( 'pick-me' ) );
+	}
+
+	public function test_declarative_match_bookmarks_markup_wildcards_delete_me_this_is_an_internal_detail_but_for_now_helpful_for_development() {
+		$p = new WP_HTML_Tag_Processor( <<<HTML
+			<main>
+				<h1>Stuff!</h1>
+				<ul>
+					<li id=1><p>Just a thought</p></li>
+					<img>
+					<li id=2 pick-me><img></li>
+				</ul>
+			</main>
+HTML
+		);
+
+		$p->next_tag();
+
+		$this->assertTrue( $p->declarative_match( '<li></1></li>' ) );
+		$p->seek( '__placeholder_1' );
+		$this->assertSame( 'IMG', $p->get_tag() );
+
+		$p->rewind();
+		$this->assertTrue( $p->declarative_match( '<main></1></2><ul>' ) );
+
+		$p->seek( '__placeholder_1' );
+		$this->assertSame( 'H1', $p->get_tag() );
+		$this->assertFalse( $p->is_tag_closer() );
+
+		$p->seek( '__placeholder_2' );
+		$this->assertSame( 'H1', $p->get_tag() );
+		$this->assertTrue( $p->is_tag_closer() );
 	}
 }
