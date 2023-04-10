@@ -2344,4 +2344,64 @@ HTML
 		$this->assertSame( 'H1', $p->get_tag() );
 		$this->assertTrue( $p->is_tag_closer() );
 	}
+
+	/**
+	 * @dataProvider data_html_transforms
+	 */
+	public function test_transforms_html( $pattern, $transformer, $input, $output ) {
+		$p = new WP_HTML_Tag_Processor( $input );
+		$p->transform( $pattern, $transformer );
+
+		$this->assertSame( $output, $p->get_updated_html() );
+	}
+
+	public function data_html_transforms() {
+		return array(
+			'Unwrap image tag' => array(
+				'<div><img></div>',
+				'<html><img>',
+				'<div class="wp-div-image"><img src="atat.png" class="full-width"></div><br>',
+				'<img src="atat.png" class="full-width"><br>'
+			),
+			'Remove first image' => array(
+				'</-img><img>',
+				'<img>',
+				'<img first><img second>',
+				'<img second>'
+			),
+			'Remove second image' => array(
+				'<img></-img>',
+				'<img>',
+				'<img first><img second>',
+				'<img first>'
+			),
+			'Add image before' => array(
+				'<img>',
+				'</+img><img>',
+				'<img first>',
+				'<img><img first>'
+			),
+			'Add image after' => array(
+				'<img>',
+				'<img></+img>',
+				'<img first>',
+				'<img first><img>'
+			),
+		);
+	}
+
+	/**
+	 * @dataProvider data_css_selectors_to_html
+	 */
+	public function test_generates_html_from_css_selector( $selector, $html ) {
+		$this->assertTrue( true );
+	}
+
+	public function data_css_selectors_to_html() {
+		return array(
+			'Single element'   => array( 'table', 'table' ),
+			'Single class'     => array( '.is-working', '</1 class="is-working">' ),
+			'Adjacent Sibling' => array( '* + img', '</1><img>' ),
+		);
+	}
 }

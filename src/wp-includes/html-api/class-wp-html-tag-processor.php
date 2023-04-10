@@ -2392,6 +2392,89 @@ class WP_HTML_Tag_Processor {
 	}
 
 	/**
+	 * @since 6.3.0
+	 */
+	public function transform( $pattern_html, $transformer_html ) {
+		$visit_everything = array( 'tag_closers' => 'visit', 'funky_comments' => 'visit' );
+		$pattern          = new WP_HTML_Tag_Processor( $pattern_html );
+		$transform        = new WP_HTML_Tag_Processor( $transformer_html );
+
+		if (
+			! $pattern->next_tag( $visit_everything ) ||
+			! $transform->next_tag( $visit_everything ) ||
+			! $this->declarative_match( $pattern_html )
+		) {
+			return false;
+		}
+
+		$this->set_bookmark( 'match_start' );
+
+		$same_thing = function ( WP_HTML_Tag_Processor $pattern, WP_HTML_Tag_Processor $test ) {
+			if ( $pattern->is_funky_comment() ) {
+//				$this->placeholders++;
+//				$this->set_bookmark( "__placeholder_{$this->placeholders}" );
+				return true;
+			}
+
+			if ( ! (
+				$pattern->get_tag() === $test->get_tag() &&
+				$pattern->is_tag_closer() === $test->is_tag_closer() &&
+				$pattern->is_funky_comment() === $test->is_funky_comment()
+			) ) {
+				return false;
+			}
+
+			$attribute_constraints = $pattern->get_attribute_names_with_prefix( '' );
+			if ( null === $attribute_constraints ) {
+				return true;
+			}
+
+			foreach ( $attribute_constraints as $name ) {
+				if ( $pattern->get_attribute( $name ) !== $test->get_attribute( $name ) ) {
+					return false;
+				}
+			}
+
+			return true;
+		};
+
+		$budget = 10;
+		while ( $budget-- ) {
+			if ( $same_thing( $pattern, $transform ) ) {
+				if ( ! $transform->next_tag( $visit_everything ) ) {
+					goto drop_patterns;
+				}
+				$this->next_tag( $visit_everything );
+				$pattern->next_tag( $visit_everything );
+				continue;
+			}
+
+			$this->set_bookmark( 'here' );
+			$this->lexical_updates[] = new WP_HTML_Text_Replacement(
+				$this->bookmarks['here']->start,
+				$this->bookmarks['here']->end + 1,
+				''
+			);
+			var_dump( substr( $this->html, $this->bookmarks['here']->start, $this->bookmarks['here']->end - $this->bookmarks['here']->start + 1 ) );
+			$this->get_updated_html();
+			$pattern->next_tag( $visit_everything );
+			$this->next_tag( $visit_everything );
+		}
+
+		drop_patterns:
+		while ( $pattern->next_tag( $visit_everything ) ) {
+			$this->set_bookmark( 'here' );
+			$this->lexical_updates[] = new WP_HTML_Text_Replacement(
+				$this->bookmarks['here']->start,
+				$this->bookmarks['here']->end + 1,
+				''
+			);
+			var_dump( substr( $this->html, $this->bookmarks['here']->start, $this->bookmarks['here']->end - $this->bookmarks['here']->start + 1 ) );
+			$this->next_tag( $visit_everything );
+		}
+	}
+
+	/**
 	 * Checks whether a given tag and its attributes match the search criteria.
 	 *
 	 * @since 6.2.0
