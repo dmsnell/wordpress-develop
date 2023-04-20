@@ -6,6 +6,23 @@
  * @subpackage HTML-API
  */
 
+if ( ! class_exists( 'WP_UnitTestCase' ) ) {
+	class WP_UnitTestCase extends PHPUnit\Framework\TestCase {}
+
+	require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-attribute-token.php';
+	require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-span.php';
+//	require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-spec.php';
+	require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-text-replacement.php';
+	require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-tag-processor.php';
+//	require_once '/Users/dmsnell/code/WordPress-develop/src/wp-includes/html-api/class-wp-html-processor.php';
+
+	function esc_attr( $s ) { return str_replace( [ '<', '>', '"' ], [ '&lt;', '&gt;', '&quot;' ], $s ); }
+	function __( $s ) { return $s; }
+	function _doing_it_wrong( ...$args ) {
+		var_dump( $args );
+	}
+}
+
 /**
  * @group html-api
  *
@@ -1733,6 +1750,47 @@ HTML;
 	}
 
 	/**
+	 * Invalid tag names are comments on tag closers.
+	 *
+	 * See https://html.spec.whatwg.org/#parse-error-invalid-first-character-of-tag-name
+	 *
+	 * @ticket 58007
+	 *
+	 * @dataProvider data_next_tag_ignores_invalid_first_character_of_tag_name_comments
+	 *
+	 * @param string $html_with_markers HTML containing an invalid tag closer whose element before and
+	 *                                  element after contain the "start" and "end" CSS classes.
+	 */
+	public function test_next_tag_ignores_invalid_first_character_of_tag_name_comments( $html_with_markers ) {
+		$p = new WP_HTML_Tag_Processor( $html_with_markers );
+		$p->next_tag( array( 'class_name' => 'start' ) );
+		$p->next_tag();
+
+		$this->assertSame( 'end', $p->get_attribute( 'class' ) );
+	}
+
+	/**
+	 * Data provider.
+	 *
+	 * @return array[]
+	 */
+	public function data_next_tag_ignores_invalid_first_character_of_tag_name_comments() {
+		return array(
+			'Invalid tag openers as normal text'           => array(
+				'<ul><li><div class=start>I <3 when outflow > inflow</div><img class=end></li></ul>',
+			),
+
+			'Invalid tag closers as comments'              => array(
+				'<ul><li><div class=start>I </3 when <img> outflow <br class=end> inflow</div></li></ul>',
+			),
+
+			'Unexpected question mark instead of tag name' => array(
+				'<div class=start><?xml-stylesheet type="text/css" href="style.css"?><hr class=end>',
+			),
+		);
+	}
+
+	/**
 	 * @ticket 56299
 	 *
 	 * @covers WP_HTML_Tag_Processor::next_tag
@@ -1781,6 +1839,96 @@ HTML;
 				'rcdata_then_div' => '<textarea class="d-md-none"></title></textarea><div></div>',
 				'rcdata_tag'      => 'TEXTAREA',
 			),
+		);
+	}
+
+	/**
+	 * Ensures that the invalid comment closing syntax "--!>" properly closes a comment.
+	 *
+	 * @ticket 58007
+	 * @covers WP_HTML_Tag_Processor::next_tag
+	 *
+	 */
+	public function test_allows_incorrectly_closed_comments() {
+		$p = new WP_HTML_Tag_Processor( '<img id=before><!-- <img id=inside> --!><img id=after>--><img id=final>' );
+
+		$p->next_tag();
+		$this->assertSame( 'before', $p->get_attribute( 'id' ), 'Did not find starting tag.' );
+
+		$p->next_tag();
+		$this->assertSame( 'after', $p->get_attribute( 'id' ), 'Did not properly close improperly-closed comment.' );
+
+		$p->next_tag();
+		$this->assertSame( 'final', $p->get_attribute( 'id' ), 'Did not skip over unopened comment-closer.' );
+	}
+
+	/**
+	 * Ensures that unclosed and invalid comments don't trigger warnings or errors.
+	 *
+	 * @ticket 58007
+	 *
+	 * @covers WP_HTML_Tag_Processor::next_tag
+	 * @dataProvider data_html_with_unclosed_comments
+	 *
+	 * @param string $html_ending_before_comment_close HTML with opened comments that aren't closed
+	 */
+	public function test_documents_may_end_with_unclosed_comment( $html_ending_before_comment_close ) {
+		$p = new WP_HTML_Tag_Processor( $html_ending_before_comment_close );
+
+		$this->assertFalse( $p->next_tag() );
+	}
+
+	/**
+	 * Data provider.
+	 *
+	 * @return array[]
+	 */
+	public function data_html_with_unclosed_comments() {
+		return array(
+			'Shortest open valid comment'      => array( '<!--' ),
+			'Basic truncated comment'          => array( '<!-- this ends --' ),
+			'Comment with closer look-alike'   => array( '<!-- this ends --x' ),
+			'Comment with closer look-alike 2' => array( '<!-- this ends --!x' ),
+			'Invalid tag-closer comment'       => array( '</(when will this madness end?)' ),
+			'Invalid tag-closer comment 2'     => array( '</(when will this madness end?)--' )
+		);
+	}
+
+	/**
+	 * Ensures that abruptly-closed empty comments are properly closed.
+	 *
+	 * @ticket 58007
+	 *
+	 * @covers WP_HTML_Tag_Processor::next_tag
+	 * @dataProvider data_abruptly_closed_empty_comments
+	 *
+	 * @param string $html_with_after_marker HTML to test with "id=after" on element immediately following an abruptly closed comment.
+	 */
+	public function test_closes_abrupt_closing_of_empty_comment( $html_with_after_marker ) {
+		$p = new WP_HTML_Tag_Processor( $html_with_after_marker );
+		$p->next_tag();
+		$p->next_tag();
+
+		$this->assertSame( 'after', $p->get_attribute( 'id' ), 'Did not find tag after closing abruptly-closed comment' );
+	}
+
+	/**
+	 * Data provider.
+	 *
+	 * @return array[]
+	 */
+	public function data_abruptly_closed_empty_comments() {
+		return array(
+			'Empty comment with two dashes only' => array( '<hr><!--><hr id=after>' ),
+			'Empty comment with two dashes only, improperly closed' => array( '<hr><!--!><hr id=inside>--><hr id=after>' ),
+			'Comment with two dashes only, improperly closed twice' => array( '<hr><!--!><hr id=inside>--!><hr id=after>' ),
+			'Empty comment with three dashes'    => array( '<hr><!---><hr id=after>' ),
+			'Empty comment with three dashes, improperly closed' => array( '<hr><!---!><hr id=inside>--><hr id=after>' ),
+			'Comment with three dashes, improperly closed twice' => array( '<hr><!---!><hr id=inside>--!><hr id=after>' ),
+			'Empty comment with four dashes'     => array( '<hr><!----><hr id=after>' ),
+			'Empty comment with four dashes, improperly closed' => array( '<hr><!----!><hr id=after>--><hr id=final>' ),
+			'Comment with four dashes, improperly closed twice' => array( '<hr><!----!><hr id=after>--!><hr id=final>' ),
+			'Comment with almost-closer inside'  => array( '<hr><!-- ---!><hr id=after>--!><hr id=final>' ),
 		);
 	}
 
@@ -2119,6 +2267,159 @@ HTML
 				'input'    => '<hr id a  =5><span>test</span>',
 				'expected' => '<hr class="firstTag" foo="bar" id a  =5><span class="secondTag">test</span>',
 			),
+		);
+	}
+
+	/**
+	 * @dataProvider data_funky_comments
+	 */
+	public function test_stops_at_funky_comments( $html, $content ) {
+		$p = new WP_HTML_Tag_Processor( $html );
+
+		$this->assertTrue( $p->next_tag( array( 'funky_comments' => 'visit' ) ) );
+		$this->assertEquals( $content, $p->get_funky_content() );
+	}
+
+	public function data_funky_comments() {
+		return array(
+			'Isolated comment'   => array( '</1>', '1' ),
+			'Inside text'        => array( 'Before</1>After', '1' ),
+			'%name syntax'       => array( 'Today is </%day>.', '%day' ),
+			'With spaces inside' => array( 'What </$variable is this>?', '$variable is this' ),
+		);
+	}
+
+	/**
+	 * @dataProvider data_declarative_patterns
+	 */
+	public function test_matches_declarative_pattern( $pattern, $html, $matches ) {
+		$p = new WP_HTML_Tag_Processor( $html );
+
+		if ( $matches ) {
+			$this->assertTrue( $p->declarative_match( $pattern ) );
+		} else {
+			$this->assertFalse( $p->declarative_match( $pattern ) );
+		}
+	}
+
+	public function data_declarative_patterns() {
+		return array(
+			'Single tag'                 => array( '<div>', '<div>', true ),
+			'^Single tag'                => array( '<div>', '<img>', false ),
+			'Wrapped image'              => array( '<div><img></div>', '<div><img></div>', true ),
+			'Wrapped image w/attributes' => array( '<div><img></div>', '<div id="14"><img src="hallumi" inert></div>', true ),
+			'Prefix before match'        => array( '<li><img></li>', '<main><h1>Stuff!</h1><ul><li><img></li></ul></main>', true ),
+			'Pattern with attribute'     => array( '<li is-active><img></li>', '<li is-active><img></li>', true ),
+			'^Pattern with attribute'    => array( '<li is-active><img></li>', '<li><img></li>', false ),
+			'Pattern with attributes'    => array( '<li is-active class="slick"><img></li>', '<li class="slick" is-active><img></li>', true ),
+			'^Pattern with attributes'   => array( '<li is-active class="slick"><img></li>', '<li id="slick" is-active><img></li>', false ),
+			'^Pattern with attributes 2' => array( '<li is-active class="slick"><img></li>', '<li class="wicket" is-active><img></li>', false ),
+			'Test with attributes'       => array( '<li is-active><img></li>', '<li id="5" is-funky=maybe style=\'color: red;\' is-active class="test-class bright"><img></li>', true ),
+			'^Test with attributes'      => array( '<li is-active><img></li>', '<li id="5" is-funky=maybe style=\'color: red;\' isactive class="test-class bright"><img></li>', false ),
+			'Attribute with value'       => array( '<input disabled>', '<input type="text"><input><input disabled><input value="5">', true ),
+			'Attribute with text'        => array( '<input id="5">', '<input type="text"><input><input id=5><input disabled><input value="5">', true ),
+			'^Attribute with value'      => array( '<input disabled>', '<input type="text"><input><input disable><input value="5">', false ),
+			'Wildcard'                   => array( '<hgroup></1></2></hgroup>', '<hgroup><h1>Important</h1></hgroup>', true ),
+			'^Wildcard'                  => array( '<hgroup></1></2></hgroup>', '<hgroup><img></hgroup>', false ),
+			'Wildcard attributes'        => array( '</1 aria-label="placeholder">', '<div><p><strong>This</strong> is <em aria-label="placeholder">really</em> cool!</p></div>', true ),
+		);
+	}
+
+	public function test_declarative_match_pauses_at_start_of_match() {
+		$p = new WP_HTML_Tag_Processor( '<main><h1>Stuff!</h1><ul><li pick-me><img></li></ul></main>' );
+
+		$this->assertTrue( $p->declarative_match( '<li><img></li>' ) );
+		$this->assertTrue( $p->get_attribute( 'pick-me' ) );
+	}
+
+	public function test_declarative_match_bookmarks_markup_wildcards_delete_me_this_is_an_internal_detail_but_for_now_helpful_for_development() {
+		$p = new WP_HTML_Tag_Processor( <<<HTML
+			<main>
+				<h1>Stuff!</h1>
+				<ul>
+					<li id=1><p>Just a thought</p></li>
+					<img>
+					<li id=2 pick-me><img></li>
+				</ul>
+			</main>
+HTML
+		);
+
+		$p->next_tag();
+
+		$this->assertTrue( $p->declarative_match( '<li></1></li>' ) );
+		$p->seek( '__placeholder_1' );
+		$this->assertSame( 'IMG', $p->get_tag() );
+
+		$p->rewind();
+		$this->assertTrue( $p->declarative_match( '<main></1></2><ul>' ) );
+
+		$p->seek( '__placeholder_1' );
+		$this->assertSame( 'H1', $p->get_tag() );
+		$this->assertFalse( $p->is_tag_closer() );
+
+		$p->seek( '__placeholder_2' );
+		$this->assertSame( 'H1', $p->get_tag() );
+		$this->assertTrue( $p->is_tag_closer() );
+	}
+
+	/**
+	 * @dataProvider data_html_transforms
+	 */
+	public function test_transforms_html( $pattern, $transformer, $input, $output ) {
+		$p = new WP_HTML_Tag_Processor( $input );
+		$p->transform( $pattern, $transformer );
+
+		$this->assertSame( $output, $p->get_updated_html() );
+	}
+
+	public function data_html_transforms() {
+		return array(
+			'Unwrap image tag' => array(
+				'<div><img></div>',
+				'<html><img>',
+				'<div class="wp-div-image"><img src="atat.png" class="full-width"></div><br>',
+				'<img src="atat.png" class="full-width"><br>'
+			),
+			'Remove first image' => array(
+				'</-img><img>',
+				'<img>',
+				'<img first><img second>',
+				'<img second>'
+			),
+			'Remove second image' => array(
+				'<img></-img>',
+				'<img>',
+				'<img first><img second>',
+				'<img first>'
+			),
+			'Add image before' => array(
+				'<img>',
+				'</+img><img>',
+				'<img first>',
+				'<img><img first>'
+			),
+			'Add image after' => array(
+				'<img>',
+				'<img></+img>',
+				'<img first>',
+				'<img first><img>'
+			),
+		);
+	}
+
+	/**
+	 * @dataProvider data_css_selectors_to_html
+	 */
+	public function test_generates_html_from_css_selector( $selector, $html ) {
+		$this->assertTrue( true );
+	}
+
+	public function data_css_selectors_to_html() {
+		return array(
+			'Single element'   => array( 'table', 'table' ),
+			'Single class'     => array( '.is-working', '</1 class="is-working">' ),
+			'Adjacent Sibling' => array( '* + img', '</1><img>' ),
 		);
 	}
 }
