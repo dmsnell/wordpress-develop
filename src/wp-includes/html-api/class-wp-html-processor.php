@@ -3,7 +3,48 @@
 class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	public $open_elements = array();
 
+	/**
+	 * Advance the parser by one step.
+	 *
+	 * Implements the HTML fragment parsing algorithm.
+	 * See https://html.spec.whatwg.org/#parsing-html-fragments
+	 *
+	 * Only parts of the full algorithm are supported in this class.
+	 * For cases where the input HTML doesn't conform to the supported
+	 * domain of the fragment parsing algorithm this method will abort
+	 * and return `false`.
+	 *
+	 * @param string $insertion_mode Starting insertion mode for parser, best to leave as the default value
+	 *                               unless knowingly handling HTML that will be included inside known tags.
+	 *
+	 * @return boolean Whether an element was found.
+	 */
+	public function step( $insertion_mode = 'in-body' ) {
+		switch ( $insertion_mode ) {
+			case 'in-body':
+				return $this->step_in_body();
+
+			default:
+				return false;
+		}
+	}
+
+	/**
+	 * Parses next element in the 'in body' insertion mode.
+	 *
+	 * @return boolean Whether an element was found.
+	 */
+	private function step_in_body() {
+		return false;
+	}
+
 	public function next_tag( $query = null ) {
+		/*
+		 * The first thing that needs to happen when stepping through the HTML is to
+		 * close any void and self-closing elements. These appear on the open stack
+		 * to support matching CSS selectors and gauging depths, but they don't
+		 * truly have distinct openings and closings.
+		 */
 		if ( 0 < count( $this->open_elements ) ) {
 			$element = WP_HTML_Spec::element_info( end( $this->open_elements ) );
 			if ( $element::IS_VOID  || ( ! $element::IS_HTML && $this->has_self_closing_flag() ) ) {
