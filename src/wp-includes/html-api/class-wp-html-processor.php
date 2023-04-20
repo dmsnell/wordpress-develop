@@ -61,13 +61,16 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		$self_closes = $element::IS_VOID || ( ! $element::IS_HTML && $this->has_self_closing_flag() );
 		if ( $self_closes ) {
 			$this->open_elements[] = $tag_name;
+			$this->set_bookmark( '__open_elements_' . count( $this->open_elements ) );
 			return true;
 		}
 
 		if ( $this->is_tag_closer() ) {
+			$this->release_bookmark( '__open_elements_' . count( $this->open_elements ) );
 			array_pop( $this->open_elements );
 		} else {
 			$this->open_elements[] = $tag_name;
+			$this->set_bookmark( '__open_elements_' . count( $this->open_elements ) );
 		}
 
 		return true;
@@ -111,6 +114,16 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		}
 
 		return false;
+	}
+
+	public function seek( $bookmark_name ) {
+		parent::seek( $bookmark_name );
+
+		foreach ( $this->bookmarks as $name => $mark ) {
+			if ( str_starts_with( $name, '__open_elements_' ) && $mark->start > $this->bookmarks[ $bookmark_name ]->start ) {
+				$this->release_bookmark( $name );
+			}
+		}
 	}
 
 	private function find_closing_tag() {
