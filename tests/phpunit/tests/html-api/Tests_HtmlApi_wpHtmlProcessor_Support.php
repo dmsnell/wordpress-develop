@@ -38,15 +38,6 @@ class Tests_HtmlApi_wpHtmlProcessor_Support extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @dataProvider data_fully_balanced_html
-	 */
-	public function test_detects_fully_balanced_html( $html ) {
-		$p = new WP_HTML_Processor( $html );
-
-		$this->assertTrue( $p->ensure_support(), "Detected that supported HTML input isn't supported." );
-	}
-
-	/**
 	 * @return array[]
 	 */
 	public function data_fully_balanced_html() {
@@ -60,15 +51,6 @@ class Tests_HtmlApi_wpHtmlProcessor_Support extends WP_UnitTestCase {
 			'Nested with void tags'                     => array( '<div><p><img>Text<br>More Text</p></div>' ),
 			'HTML foreign elements'                     => array( '<svg><circle /></svg>' )
 		);
-	}
-
-	/**
-	 * @dataProvider data_not_fully_balanced_html
-	 */
-	public function test_detects_not_fully_balanced_html( $html ) {
-		$p = new WP_HTML_Processor( $html );
-
-		$this->assertFalse( $p->ensure_support(), 'Detected that unsupported HTML input is supported.' );
 	}
 
 	/**

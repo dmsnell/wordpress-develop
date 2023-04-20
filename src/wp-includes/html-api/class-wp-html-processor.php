@@ -1,52 +1,12 @@
 <?php
 
 class WP_HTML_Processor extends WP_HTML_Tag_Processor {
-	public $fully_supported_input = null;
 	public $open_elements = array();
 
-	public function ensure_support() {
-		if ( null !== $this->fully_supported_input ) {
-			return $this->fully_supported_input;
-		}
-
-		$stack = array();
-
-		$p = new WP_HTML_Tag_Processor( $this->html );
-		while ( $p->next_tag( array( 'tag_closers' => 'visit' ) ) ) {
-			$tag_name = $p->get_tag();
-
-			if ( ! $p->is_tag_closer() ) {
-				$element = WP_HTML_Spec::element_info( $tag_name );
-
-				$self_closes = $element::IS_VOID || ( ! $element::IS_HTML && $p->has_self_closing_flag() );
-				if ( ! $self_closes ) {
-					$stack[] = $tag_name;
-				}
-			} else {
-				if ( end( $stack ) === $tag_name ) {
-					array_pop( $stack );
-					continue;
-				}
-
-				$this->fully_supported_input = false;
-				return false;
-			}
-		}
-
-		$this->fully_supported_input = 0 === count( $stack );
-
-		return $this->fully_supported_input;
-	}
-
 	public function next_tag( $query = null ) {
-		if ( false === $this->fully_supported_input || false === $this->ensure_support() ) {
-			return false;
-		}
-
 		if ( 0 < count( $this->open_elements ) ) {
 			$element = WP_HTML_Spec::element_info( end( $this->open_elements ) );
-			// @TODO: Handle self-closing HTML foreign elements: must convey self-closing flag on stack.
-			if ( $element::IS_VOID ) {
+			if ( $element::IS_VOID  || ( ! $element::IS_HTML && $this->has_self_closing_flag() ) ) {
 				array_pop( $this->open_elements );
 			}
 		}
@@ -77,10 +37,6 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	}
 
 	public function next_sibling() {
-		if ( false === $this->fully_supported_input || false === $this->ensure_support() ) {
-			return false;
-		}
-
 		$starting_depth = count( $this->open_elements );
 
 		while ( $this->next_tag() ) {
@@ -99,10 +55,6 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	}
 
 	public function first_child() {
-		if ( false === $this->fully_supported_input || false === $this->ensure_support() ) {
-			return false;
-		}
-
 		$starting_depth = count( $this->open_elements );
 
 		while ( $this->next_tag() ) {
@@ -141,10 +93,6 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	}
 
 	public function get_inner_content() {
-		if ( false === $this->fully_supported_input || false === $this->ensure_support() ) {
-			return false;
-		}
-
 		if ( ! $this->get_tag() || $this->is_tag_closer() ) {
 			return false;
 		}
@@ -172,10 +120,6 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	}
 
 	public function set_inner_content( $new_html ) {
-		if ( false === $this->fully_supported_input || false === $this->ensure_support() ) {
-			return false;
-		}
-
 		if ( ! $this->get_tag() || $this->is_tag_closer() ) {
 			return false;
 		}
@@ -203,10 +147,6 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	}
 
 	public function get_outer_content() {
-		if ( false === $this->fully_supported_input || false === $this->ensure_support() ) {
-			return false;
-		}
-
 		if ( ! $this->get_tag() || $this->is_tag_closer() ) {
 			return false;
 		}
@@ -237,10 +177,6 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	}
 
 	public function set_outer_content( $new_html ) {
-		if ( false === $this->fully_supported_input || false === $this->ensure_support() ) {
-			return false;
-		}
-
 		if ( ! $this->get_tag() || $this->is_tag_closer() ) {
 			return false;
 		}
