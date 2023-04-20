@@ -54,12 +54,12 @@ class Tests_HtmlApi_wpHtmlTagProcessor extends WP_UnitTestCase {
 	/**
 	 * @ticket 58009
 	 *
-	 * @covers WP_HTML_Tag_Processor::has_self_closing_flag()
+	 * @covers WP_HTML_Tag_Processor::has_self_closing_flag
 	 *
 	 * @dataProvider data_has_self_closing_flag
 	 *
-	 * @param string $html input HTML whose first tag might contain the self-closing flag `/`.
-	 * @param bool $flag_is_set whether the input HTML's first tag contains the self-closing flag.
+	 * @param string $html Input HTML whose first tag might contain the self-closing flag `/`.
+	 * @param bool $flag_is_set Whether the input HTML's first tag contains the self-closing flag.
 	 */
 	public function test_has_self_closing_flag_matches_input_html( $html, $flag_is_set ) {
 		$p = new WP_HTML_Tag_Processor( $html );
@@ -85,6 +85,7 @@ class Tests_HtmlApi_wpHtmlTagProcessor extends WP_UnitTestCase {
 			// These should not have a self-closer, but are benign when used because the elements are void.
 			'Self-closing flag on void HTML element'     => array( '<img />', true ),
 			'No self-closing flag on void HTML element'  => array( '<img>', false ),
+			'Self-closing flag on void HTML element without spacing' => array( '<img/>', true ),
 			// These should not have a self-closer, but as part of a tag closer they are entirely ignored.
 			'Self-closing flag on tag closer'            => array( '</textarea />', true ),
 			'No self-closing flag on tag closer'         => array( '</textarea>', false ),
@@ -96,6 +97,7 @@ class Tests_HtmlApi_wpHtmlTagProcessor extends WP_UnitTestCase {
 			'Self-closing flag after attribute'          => array( '<div id=test/>', true ),
 			'Self-closing flag after quoted attribute'   => array( '<div id="test"/>', true ),
 			'Self-closing flag after boolean attribute'  => array( '<div enabled/>', true ),
+			'Boolean attribute that looks like a self-closer' => array( '<div / >', false ),
 		);
 	}
 
@@ -958,6 +960,24 @@ class Tests_HtmlApi_wpHtmlTagProcessor extends WP_UnitTestCase {
 			$p->get_updated_html(),
 			'Existing attribute was not updated'
 		);
+	}
+
+	/**
+	 * Ensures that when setting an attribute multiple times that only
+	 * one update flushes out into the updated HTML.
+	 *
+	 * @ticket 58146
+	 *
+	 * @covers WP_HTML_Tag_Processor::set_attribute
+	 */
+	public function test_set_attribute_with_case_variants_updates_only_the_original_first_copy() {
+		$p = new WP_HTML_Tag_Processor( '<div data-enabled="5">' );
+		$p->next_tag();
+		$p->set_attribute( 'DATA-ENABLED', 'canary' );
+		$p->set_attribute( 'Data-Enabled', 'canary' );
+		$p->set_attribute( 'dATa-EnABled', 'canary' );
+
+		$this->assertSame( '<div data-enabled="canary">', strtolower( $p->get_updated_html() ) );
 	}
 
 	/**
