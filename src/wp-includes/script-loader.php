@@ -184,7 +184,7 @@ function wp_get_script_polyfill( $scripts, $tests ) {
 		$src = $scripts->registered[ $handle ]->src;
 		$ver = $scripts->registered[ $handle ]->ver;
 
-		if ( ! preg_match( '|^(https?:)?//|', $src ) && ! ( $scripts->content_url && 0 === strpos( $src, $scripts->content_url ) ) ) {
+		if ( ! preg_match( '|^(https?:)?//|', $src ) && ! ( $scripts->content_url && str_starts_with( $src, $scripts->content_url ) ) ) {
 			$src = $scripts->base_url . $src;
 		}
 
@@ -2944,24 +2944,23 @@ function _wp_normalize_relative_css_links( $css, $stylesheet_url ) {
 		static function ( $matches ) use ( $stylesheet_url ) {
 			list( , $prefix, $url ) = $matches;
 
-			if ( ! (
-				str_starts_with( $url, 'http:' )
-				||
-				str_starts_with( $url, 'https:' )
-				||
-				str_starts_with( $url, '//' )
-				||
-				str_starts_with( $url, '#' )
-				||
+			// Short-circuit if the URL does not require normalization.
+			if (
+				str_starts_with( $url, 'http:' ) ||
+				str_starts_with( $url, 'https:' ) ||
+				str_starts_with( $url, '//' ) ||
+				str_starts_with( $url, '#' ) ||
 				str_starts_with( $url, 'data:' )
-			) ) {
-				// Build the absolute URL.
-				$absolute_url = dirname( $stylesheet_url ) . '/' . $url;
-				$absolute_url = str_replace( '/./', '/', $absolute_url );
-
-				// Convert to URL related to the site root.
-				$url = wp_make_link_relative( $absolute_url );
+			) {
+				return $matches[0];
 			}
+
+			// Build the absolute URL.
+			$absolute_url = dirname( $stylesheet_url ) . '/' . $url;
+			$absolute_url = str_replace( '/./', '/', $absolute_url );
+
+			// Convert to URL related to the site root.
+			$url = wp_make_link_relative( $absolute_url );
 
 			return $prefix . $url;
 		},
