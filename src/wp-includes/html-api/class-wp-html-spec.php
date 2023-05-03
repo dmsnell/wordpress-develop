@@ -295,6 +295,7 @@ class WP_HTML_Spec {
 class WP_HTML_Element_Meta {
 	const IS_VOID = false;
 	const IS_HTML = true;
+	const IS_SPECIAL = false;
 }
 
 class WP_HTMLElement extends WP_HTML_Element_Meta {
@@ -320,16 +321,22 @@ class WP_HTMLAbbrElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLAddressElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
+
+// @TODO: Add deprecated special rule: APPLET
 
 class WP_HTMLAreaElement extends WP_HTML_Element_Meta {
 	const IS_VOID = true;
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLArticleElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLAsideElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLAudioElement extends WP_HTML_Element_Meta {
@@ -339,6 +346,7 @@ class WP_HTMLBElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLBaseElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 	const IS_VOID = true;
 }
 
@@ -349,22 +357,27 @@ class WP_HTMLBdoElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLBlockquoteElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLBodyElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLBrElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 	const IS_VOID = true;
 }
 
 class WP_HTMLButtonElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLCanvasElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLCaptionElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLCiteElement extends WP_HTML_Element_Meta {
@@ -374,10 +387,12 @@ class WP_HTMLCodeElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLColElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 	const IS_VOID = true;
 }
 
 class WP_HTMLColgroupElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLDataElement extends WP_HTML_Element_Meta {
@@ -387,12 +402,14 @@ class WP_HTMLDataListElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLDdElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLDelElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLDetailsElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLDfnElement extends WP_HTML_Element_Meta {
@@ -402,81 +419,104 @@ class WP_HTMLDialogElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLDivElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLDlElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLDtElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLEmElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLEmbedElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 	const IS_VOID = true;
 }
 
 class WP_HTMLFieldsetElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLFigcaptionElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLFigureElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLFooterElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLFormElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLH1Element extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLH2Element extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLH3Element extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLH4Element extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLH5Element extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLH6Element extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLHeadElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLHeaderElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
-class WP_HTMLHgropuElement extends WP_HTML_Element_Meta {
+class WP_HTMLHgroupElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLHrElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 	const IS_VOID = true;
 }
 
 class WP_HTMLHtmlElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLIElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLIframeElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLImgElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 	const IS_VOID = true;
 }
 
 class WP_HTMLInputElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 	const IS_VOID = true;
 }
 
@@ -493,13 +533,16 @@ class WP_HTMLLegendElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLLiElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLLinkElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 	const IS_VOID = true;
 }
 
 class WP_HTMLMainElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLMapElement extends WP_HTML_Element_Meta {
@@ -512,9 +555,11 @@ class WP_HTMLMathElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLMenuElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLMetaElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 	const IS_VOID = true;
 }
 
@@ -522,15 +567,18 @@ class WP_HTMLMeterElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLNavElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLNoscriptElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLObjectElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLOlElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLOptgroupElement extends WP_HTML_Element_Meta {
@@ -543,12 +591,14 @@ class WP_HTMLOutputElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLPElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLPictureElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLPreElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLProgressElement extends WP_HTML_Element_Meta {
@@ -573,12 +623,15 @@ class WP_HTMLSampElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLScriptElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLSectionElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLSelectElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLSlotElement extends WP_HTML_Element_Meta {
@@ -588,6 +641,7 @@ class WP_HTMLSmallElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLSourceElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 	const IS_VOID = true;
 }
 
@@ -598,12 +652,14 @@ class WP_HTMLStrongElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLStyleElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLSubElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLSummaryElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLSupElement extends WP_HTML_Element_Meta {
@@ -613,39 +669,50 @@ class WP_HTMLSvgElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLTableElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLTbodyElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLTdElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLTemplateElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLTextareaElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLTfootElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLThElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLTheadElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLTimeElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLTitleElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLTrElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLTrackElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 	const IS_VOID = true;
 }
 
@@ -653,6 +720,7 @@ class WP_HTMLUElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLUlElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 }
 
 class WP_HTMLVarElement extends WP_HTML_Element_Meta {
@@ -662,5 +730,6 @@ class WP_HTMLVideoElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLWbrElement extends WP_HTML_Element_Meta {
+	const IS_SPECIAL = true;
 	const IS_VOID = true;
 }
