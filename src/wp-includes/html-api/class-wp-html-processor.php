@@ -1,7 +1,11 @@
 <?php
 
 class WP_HTML_Processor extends WP_HTML_Tag_Processor {
+	const NOT_IMPLEMENTED_YET = false;
+
 	private $depth = 0;
+	private static $query = array( 'tag_closers' => 'visit' );
+	private $insertion_mode = 'in-body';
 
 	/**
 	 * Advance the parser by one step.
@@ -19,22 +23,158 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 *
 	 * @return boolean Whether an element was found.
 	 */
-	public function step( $insertion_mode = 'in-body' ) {
-		switch ( $insertion_mode ) {
+	public function step( $insertion_mode = null ) {
+		switch ( $insertion_mode ?: $this->insertion_mode ) {
 			case 'in-body':
 				return $this->step_in_body();
 
 			default:
-				return false;
+				return self::NOT_IMPLEMENTED_YET;
 		}
+	}
+
+	/**
+	 * Parses next element in the 'in head' insertion mode.
+	 *
+	 * Not yet implemented.
+	 *
+	 * @see https://html.spec.whatwg.org/#parsing-main-inhead
+	 *
+	 * @return false
+	 */
+	private function step_in_head() {
+		return self::NOT_IMPLEMENTED_YET;
 	}
 
 	/**
 	 * Parses next element in the 'in body' insertion mode.
 	 *
+	 * @see https://html.spec.whatwg.org/#parsing-main-inbody
+	 *
 	 * @return boolean Whether an element was found.
 	 */
 	private function step_in_body() {
+		ignored:
+		parent::set_bookmark( 'current' );
+		if ( ! $this->next_tag( self::$query ) ) {
+			return false;
+		}
+
+		$tag_name = $this->get_tag();
+		$tag_type = $this->is_tag_closer() ? 'closer' : 'opener';
+
+		/*
+		 * > A start tag whose tag name is "html"
+		 */
+		if ( 'HTML' === $tag_name && 'opener' === $tag_type ) {
+			goto ignored;
+		}
+
+		/*
+		 * > A start tag whose tag name is one of: "base", "basefont", "bgsound",
+		 * > "link", "meta", "noframes", "script", "style", "template", "title"
+		 *
+		 * > An end tag whose tag name is "template"
+		 */
+		if (
+			'opener' === $tag_type && (
+				'BASE' === $tag_name ||
+				'BASEFONT' === $tag_name ||
+				'BGSOUND' === $tag_name ||
+				'LINK' === $tag_name ||
+				'META' === $tag_name ||
+				'NOFRAMES' === $tag_name ||
+				'SCRIPT' === $tag_name ||
+				'STYLE' === $tag_name ||
+				'TEMPLATE' === $tag_name ||
+				'TITLE' === $tag_name
+			) ||
+			(
+				'closer' === $tag_type &&
+				'TEMPLATE' === $tag_name
+			) )
+		{
+			parent::seek( 'current' );
+			$this->insertion_mode = 'in-head';
+			return $this->step();
+		}
+
+		/*
+		 * > A start tag whose tag name is "body"
+		 */
+		if ( 'opener' === $tag_type && 'BODY' === $tag_name ) {
+			goto ignored;
+		}
+
+		/*
+		 * > A start tag whose tag name is "frameset"
+		 */
+		if ( 'opener' === $tag_type && 'FRAMESET' === $tag_name ) {
+			return self::NOT_IMPLEMENTED_YET;
+		}
+
+		/*
+		 * > An end-of-file token
+		 *
+		 * Stop parsing.
+		 */
+
+		/*
+		 * > An end tag whose tag name is "body"
+		 * > An end tag whose tag name is "html"
+		 */
+		if ( 'closer' === $tag_type && ( 'BODY' === $tag_name || 'HTML' === $tag_name ) ) {
+			/*
+			 * > If the stack of open elements does not have a body element in scope, this is a parse error; ignore the token.
+			 *
+			 * @TODO: We didn't construct an open HTML or BODY tag, but we have to make a choice here based on that.
+			 *        Probably need to create these _or_ assume this will always transfer to "after body".
+			 */
+			$this->insertion_mode = 'after-body';
+			return true;
+		}
+
+		/*
+		 * > A start tag whose tag name is one of: "address", "article", "aside", "blockquote", "center",
+		 * > "details", "dialog", "dir", "div", "dl", "fieldset", "figcaption", "figure", "footer",
+		 * > "header", "hgroup", "main", "menu", "nav", "ol", "p", "search", "section", "summary", "ul"
+		 */
+		if (
+			'opener' === $tag_type && (
+				'ADDRESS' === $tag_name ||
+				'ARTICLE' === $tag_name ||
+				'ASIDE' === $tag_name ||
+				'BLOCKQUOTE' === $tag_name ||
+				'CENTER' === $tag_name ||
+				'DETAILS' === $tag_name ||
+				'DIALOG' === $tag_name ||
+				'DIR' === $tag_name ||
+				'DIV' === $tag_name ||
+				'DL' === $tag_name ||
+				'FIELDSET' === $tag_name ||
+				'FIGCAPTION' === $tag_name ||
+				'FIGURE' === $tag_name ||
+				'FOOTER' === $tag_name ||
+				'HEADER' === $tag_name ||
+				'HGROUP' === $tag_name ||
+				'MAIN' === $tag_name ||
+				'MENU' === $tag_name ||
+				'NAV' === $tag_name ||
+				'OL' === $tag_name ||
+				'P' === $tag_name ||
+				'SEARCH' === $tag_name ||
+				'SECTION' === $tag_name ||
+				'SUMMARY' === $tag_name ||
+				'UL' === $tag_name
+			)
+		) {
+			if ( $this->has_in_scope( 'P', 'BUTTON' ) ) {
+				$this->close_p_element();
+			}
+
+			$this->enter_element( $tag_name );
+		}
+
 		return false;
 	}
 
@@ -56,7 +196,35 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		parent::release_bookmark( "{$this->depth}_{$element}" );
 	}
 
-	private function opened_element() {
+	/**
+	 * @see https://html.spec.whatwg.org/#close-a-p-element
+	 * @return void
+	 */
+	private function close_p_element() {
+		$this->generate_implied_end_tags( 'P' );
+
+
+	}
+
+	/**
+	 * @TODO: Implement this
+	 *
+	 * @see https://html.spec.whatwg.org/#generate-implied-end-tags
+	 *
+	 * @param string|null $except_for_this_element Perform as if this element doesn't exist in the stack of open elements.
+	 * @return void
+	 */
+	private function generate_implied_end_tags( $except_for_this_element = null ) {
+		
+	}
+
+	/**
+	 * The current node is the bottommost node in this stack of open elements.
+	 *
+	 * @see https://html.spec.whatwg.org/#current-node
+	 * @return false|mixed|string
+	 */
+	private function current_node() {
 		if ( 0 === $this->depth ) {
 			return false;
 		}
@@ -74,6 +242,17 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Indicates if the stack of open elements has an element in a given scope.
+	 *
+	 * @param $element
+	 * @param $scope
+	 * @return false
+	 */
+	private function has_in_scope( $element, $scope ) {
+		return self::NOT_IMPLEMENTED_YET;
 	}
 
 	public function next_tag( $query = null ) {
