@@ -1,7 +1,7 @@
 <?php
 
 class WP_HTML_Processor extends WP_HTML_Tag_Processor {
-	public $open_elements = array();
+	private $depth = 0;
 
 	/**
 	 * Advance the parser by one step.
@@ -35,6 +35,44 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return boolean Whether an element was found.
 	 */
 	private function step_in_body() {
+		return false;
+	}
+
+	public function set_bookmark( $bookmark_name ) {
+		return parent::set_bookmark( '_' . $bookmark_name );
+	}
+
+	public function release_bookmark( $bookmark_name ) {
+		return parent::release_bookmark( '_' . $bookmark_name );
+	}
+
+	private function enter_element( $element ) {
+		$this->depth++;
+
+		parent::set_bookmark( "{$this->depth}_{$element}" );
+	}
+
+	private function exit_element( $element ) {
+		parent::release_bookmark( "{$this->depth}_{$element}" );
+	}
+
+	private function opened_element() {
+		if ( 0 === $this->depth ) {
+			return false;
+		}
+
+		$max_depth = 0;
+		foreach ( $this->bookmarks as $name => $bookmark ) {
+			if ( '_' === $name[0] ) {
+				continue;
+			}
+
+			list( $depth, $element ) = explode( '_', $name );
+			if ( $depth === "{$this->depth}" ) {
+				return $element;
+			}
+		}
+
 		return false;
 	}
 
@@ -110,13 +148,25 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	}
 
 	public function seek( $bookmark_name ) {
-		parent::seek( $bookmark_name );
+		parent::seek( '_' . $bookmark_name );
 
+		$max_depth = $this->depth;
 		foreach ( $this->bookmarks as $name => $mark ) {
-			if ( str_starts_with( $name, '__open_elements_' ) && $mark->start > $this->bookmarks[ $bookmark_name ]->start ) {
-				$this->release_bookmark( $name );
+			// Regular bookmarks are prefixed with "_" so they can be ignored here.
+			if ( '_' === $name[0] ) {
+				continue;
+			}
+
+			// Element stack bookmarks are like "3_P" and "4_DIV".
+			if ( $mark->start > $this->bookmarks[ $bookmark_name ]->start ) {
+				parent::release_bookmark( $name );
+			} else {
+				$this_depth = (int) explode( '_', $name )[0];
+				$max_depth  = max( $max_depth, $this_depth );
 			}
 		}
+
+		$this->depth = $max_depth;
 	}
 
 	private function find_closing_tag() {
