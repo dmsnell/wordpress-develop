@@ -8,12 +8,6 @@ class WP_HTML_Element_Stack {
 	 */
 	public $stack = array();
 
-	public function __construct( $bookmark_name, $element, $flags ) {
-		$this->bookmark_name = $bookmark_name;
-		$this->element       = $element;
-		$this->flags         = $flags;
-	}
-
 	/**
 	 * Add an item to the top of the stack.
 	 *

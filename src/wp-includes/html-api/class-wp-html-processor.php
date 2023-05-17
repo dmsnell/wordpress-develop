@@ -1,11 +1,40 @@
 <?php
 
+require_once __DIR__ . '/class-wp-html-element-stack.php';
+
 class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	const NOT_IMPLEMENTED_YET = false;
 
 	private $depth = 0;
 	private static $query = array( 'tag_closers' => 'visit' );
 	private $insertion_mode = 'in-body';
+
+	/**
+	 * @var int Unique id for creating bookmarks.
+	 */
+	private $bookmark_id = 0;
+
+	/**
+	 * @var WP_HTML_Element_Stack Refers to element opening tags.
+	 */
+	private $tag_openers = null;
+
+	/**
+	 * @var WP_HTML_Element_Stack Referes to element closing tags.
+	 */
+	private $tag_closers = null;
+
+	/**
+	 * Create a new HTML Processor for reading and modifying HTML structure.
+	 *
+	 * @param string $html Input HTML document.
+	 */
+	public function __construct( $html ) {
+		parent::__construct( $html );
+
+		$this->tag_openers = new WP_HTML_Element_Stack();
+		$this->tag_closers = new WP_HTML_Element_Stack();
+	}
 
 	/**
 	 * Advance the parser by one step.
@@ -70,6 +99,110 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 
 		$tag_name = $this->get_tag();
 		$tag_type = $this->is_tag_closer() ? 'closer' : 'opener';
+		$op_sigil = $this->is_tag_closer() ? '-' : '+';
+		$op       = "{$op_sigil}{$tag_name}";
+
+		switch ( $op ) {
+			/*
+			 * > A start tag whose tag name is "html"
+			 */
+			case '+HTML':
+				goto ignored;
+
+			/*
+			 * > A start tag whose tag name is one of: "base", "basefont", "bgsound",
+			 * > "link", "meta", "noframes", "script", "style", "template", "title"
+			 *
+			 * > An end tag whose tag name is "template"
+			 */
+			case '+BASE':
+			case '+BASEFONT':
+			case '+BGSOUND':
+			case '+LINK':
+			case '+META':
+			case '+NOFRAMES':
+			case '+SCRIPT':
+			case '+STYLE':
+			case '+TEMPLATE':
+			case '+TITLE':
+			case '-TEMPLATE':
+				parent::seek( 'current' );
+				$this->insertion_mode = 'in-head';
+				return $this->step();
+
+			/*
+			 * > A start tag whose tag name is "body"
+			 */
+			case '+BODY':
+				goto ignored;
+
+
+			/*
+			 * > A start tag whose tag name is "frameset"
+			 */
+			case '+FRAMESET':
+				throw new Exception( self::NOT_IMPLEMENTED_YET );
+
+			/*
+			 * > An end tag whose tag name is "body"
+			 * > An end tag whose tag name is "html"
+			 */
+			case '-BODY':
+			case '-HTML':
+				/*
+				 * > If the stack of open elements does not have a body element in scope, this is a parse error; ignore the token.
+				 *
+				 * @TODO: We didn't construct an open HTML or BODY tag, but we have to make a choice here based on that.
+				 *        Probably need to create these _or_ assume this will always transfer to "after body".
+				 */
+				$this->insertion_mode = 'after-body';
+				return true;
+
+			/*
+			 * > A start tag whose tag name is one of: "address", "article", "aside", "blockquote", "center",
+			 * > "details", "dialog", "dir", "div", "dl", "fieldset", "figcaption", "figure", "footer",
+			 * > "header", "hgroup", "main", "menu", "nav", "ol", "p", "search", "section", "summary", "ul"
+			 */
+			case '+ADDRESS':
+			case '+ARTICLE':
+			case '+ASIDE':
+			case '+BLOCKQUOTE':
+			case '+CENTER':
+			case '+DETAILS':
+			case '+DIALOG':
+			case '+DIR':
+			case '+DIV':
+			case '+DL':
+			case '+FIELDSET':
+			case '+FIGCAPTION':
+			case '+FIGURE':
+			case '+FOOTER':
+			case '+HEADER':
+			case '+HGROUP':
+			case '+MAIN':
+			case '+MENU':
+			case '+NAV':
+			case '+OL':
+			case '+P':
+			case '+SEARCH':
+			case '+SECTION':
+			case '+SUMMARY':
+			case '+UL':
+				if ( $this->has_in_scope( 'P', 'BUTTON' ) ) {
+					$this->close_p_element();
+				}
+
+				$this->enter_element( $tag_name );
+				return;
+
+			/*
+			 * > An end-of-file token
+			 *
+			 * Stop parsing.
+			 */
+			default:
+				return false;
+		}
 
 		/*
 		 * > A start tag whose tag name is "html"
@@ -260,7 +393,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return false
 	 */
 	private function has_in_scope( $element, $scope ) {
-		return self::NOT_IMPLEMENTED_YET;
+		throw new Exception( self::NOT_IMPLEMENTED_YET );
 	}
 
 	public function next_tag( $query = null ) {
