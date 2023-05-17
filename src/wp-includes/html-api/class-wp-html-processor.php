@@ -24,12 +24,20 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return boolean Whether an element was found.
 	 */
 	public function step( $insertion_mode = null ) {
-		switch ( $insertion_mode ?: $this->insertion_mode ) {
-			case 'in-body':
-				return $this->step_in_body();
+		try {
+			switch ( $insertion_mode ?: $this->insertion_mode ) {
+				case 'in-body':
+					return $this->step_in_body();
 
-			default:
-				return self::NOT_IMPLEMENTED_YET;
+				default:
+					return self::NOT_IMPLEMENTED_YET;
+			}
+		} catch ( Exception $e ) {
+			/*
+			 * Exceptions are used in this class to escape deep call stacks that
+			 * otherwise might involve messier calling and return conventions.
+			 */
+			return false;
 		}
 	}
 
@@ -215,7 +223,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return void
 	 */
 	private function generate_implied_end_tags( $except_for_this_element = null ) {
-		
+
 	}
 
 	/**
