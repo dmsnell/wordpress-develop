@@ -458,6 +458,9 @@ class WP_HTMLFormElement extends WP_HTML_Element_Meta {
 	const IS_SPECIAL = true;
 }
 
+class WP_HTMLFramesetElement extends WP_HTML_Element_Meta {
+}
+
 class WP_HTMLH1Element extends WP_HTML_Element_Meta {
 	const IS_SPECIAL = true;
 }

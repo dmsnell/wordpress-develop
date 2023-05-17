@@ -1,6 +1,7 @@
 <?php
 
 class WP_HTML_Element_Stack_Item {
+	const NO_FLAGS = 0;
 	const IS_CLOSER = 1 << 0;
 	const HAS_SELF_CLOSING_FLAG = 1 << 1;
 

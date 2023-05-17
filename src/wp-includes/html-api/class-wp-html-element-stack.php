@@ -9,11 +9,25 @@ class WP_HTML_Element_Stack {
 	public $stack = array();
 
 	/**
+	 * Returns a copy of the ith element on the stack for inspection.
+	 *
+	 * @param int $nth_from_top Which item on the stack to return.
+	 * @return WP_HTML_Element_Stack_Item|null
+	 */
+	public function peek( $nth_from_top ) {
+		if ( $nth_from_top < 0 || $nth_from_top >= $this->count() ) {
+			return null;
+		}
+
+		return $this->stack[ $this->count() - $nth_from_top - 1 ];
+	}
+
+	/**
 	 * Add an item to the top of the stack.
 	 *
 	 * @TODO: Do we need to insertion-sort these?
 	 *
-	 * @param $stack_item
+	 * @param WP_HTML_Element_Stack_Item $stack_item
 	 * @return void
 	 */
 	public function push( $stack_item ) {
