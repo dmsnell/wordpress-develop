@@ -96,9 +96,9 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 *
 	 * Not implemented yet.
 	 *
-	 * @var null
+	 * @var string[]
 	 */
-	private $template_insertion_mode_stack = null;
+	private $template_insertion_mode_stack = array();
 
 	/**
 	 * Create a new HTML Processor for reading and modifying HTML structure.
