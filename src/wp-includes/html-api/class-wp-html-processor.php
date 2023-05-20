@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/class-wp-html-element-stack.php';
 require_once __DIR__ . '/class-wp-html-spec.php';
+require_once __DIR__ . '/class-wp-html-unsupported-exception.php';
 
 class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	const NOT_IMPLEMENTED_YET = false;
@@ -201,7 +202,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 				default:
 					return self::NOT_IMPLEMENTED_YET;
 			}
-		} catch ( Exception $e ) {
+		} catch ( WP_HTML_API_Unsupported_Exception $e ) {
 			/*
 			 * Exceptions are used in this class to escape deep call stacks that
 			 * otherwise might involve messier calling and return conventions.
@@ -279,7 +280,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			 * > A start tag whose tag name is "frameset"
 			 */
 			case '+FRAMESET':
-				throw new Exception( self::NOT_IMPLEMENTED_YET );
+				throw new WP_HTML_API_Unsupported_Exception( 'Cannot process FRAMESET elements.');
 
 			/*
 			 * > An end tag whose tag name is "body"
@@ -361,7 +362,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		$name = (string) ++$this->bookmark_id;
 
 		if ( false === parent::set_bookmark( $name ) ) {
-			throw new Exception( 'Could not set tag bookmark' );
+			throw new WP_HTML_API_Unsupported_Exception( 'Could not set tag bookmark' );
 		}
 
 		return $name;
@@ -447,7 +448,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return false
 	 */
 	private function has_in_scope( $element, $scope ) {
-		throw new Exception( self::NOT_IMPLEMENTED_YET );
+		throw new WP_HTML_API_Unsupported_Exception( 'Cannot check for element in scope.');
 	}
 
 	public function next_tag( $query = null ) {
@@ -756,7 +757,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 
 				case WP_HTMLTemplateElement::class:
 					// @TODO: support current template insertion mode/stack
-					throw new Exception( self::NOT_IMPLEMENTED_YET );
+					throw new WP_HTML_API_Unsupported_Exception( 'Cannot process TEMPLATE elements.' );
 
 				case WP_HTMLHeadElement::class:
 					$this->insertion_mode = self::IN_HEAD;
