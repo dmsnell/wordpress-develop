@@ -78,14 +78,25 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	private $context_node = null;
 
 	/**
+	 * Points to the HEAD element once one has been parsed, either implicitly or explicitly.
+	 *
 	 * @TODO: Implement this.
+	 *
+	 * @see https://html.spec.whatwg.org/#head-element-pointer
 	 *
 	 * @var null
 	 */
 	private $head_element_pointer = null;
 
 	/**
+	 * Points to the last form element that was opened and whose end tag has not yet been seen, if any.
+	 *
 	 * @TODO: Implement this.
+	 *
+	 * This is used to make form controls associate with forms in the face of dramatically
+	 * bad markup, for historical reasons. It is ignored inside template elements.
+	 *
+	 * @see https://html.spec.whatwg.org/#form-element-pointer
 	 *
 	 * @var null
 	 */
