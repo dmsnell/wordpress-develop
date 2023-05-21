@@ -424,123 +424,113 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	}
 
 	/**
-	 * @TODO: Implement this
+	 * Closes elements that have implied end tags.
 	 *
 	 * @see https://html.spec.whatwg.org/#generate-implied-end-tags
 	 *
 	 * @param string|null $except_for_this_element Perform as if this element doesn't exist in the stack of open elements.
 	 * @return void
+	 * @throws WP_HTML_API_Unsupported_Exception
 	 */
 	private function generate_implied_end_tags( $except_for_this_element = null ) {
+		$current_node = $this->tag_openers->current_node();
 
+		$elements_with_implied_end_tags = array(
+			WP_HTMLDdElement::class,
+			WP_HTMLDtElement::class,
+			WP_HTMLLiElement::class,
+			WP_HTMLOptgroupElement::class,
+			WP_HTMLOptionElement::class,
+			WP_HTMLPElement::class,
+			WP_HTMLRbElement::class,
+			WP_HTMLRpElement::class,
+			WP_HTMLRtElement::class,
+			WP_HTMLRtcElement::class,
+		);
+
+		// @TODO: spot_bookmark needs to get "the current position".
+		$tag = $this->tag_bookmark();
+		$this->bookmarks[ $tag ]->end = $this->bookmarks[ $tag ]->start;
+
+		// @TODO: Use $this->tag_closers to compute "open" tags. We're probably duplicating
+		//        actual tag closers right now because we assume that if a tag is in the
+		//        openers list, it has no closing tag. This is probably wrong.
+		for ( $i = 0; $i < $this->tag_openers->count(); $i++ ) {
+			$current_node = $this->tag_openers->peek( $i );
+			$element      = $current_node->element;
+
+			if ( $element === $except_for_this_element || ! in_array( $element, $elements_with_implied_end_tags, true ) ) {
+				break;
+			}
+
+			$this->tag_closers->push(
+				new WP_HTML_Element_Stack_Item(
+					$tag,
+					$current_node->element,
+					WP_HTML_Element_Stack_Item::IS_CLOSER,
+					$current_node
+				)
+			);
+		}
 	}
 
 	/**
-	 * The current node is the bottommost node in this stack of open elements.
+	 * Closes elements that have implied end tags, thoroughly.
 	 *
-	 * @see https://html.spec.whatwg.org/#current-node
-	 * @return false|mixed|string
-	 */
-	private function current_node() {
-		if ( 0 === $this->depth ) {
-			return false;
-		}
-
-		$max_depth = 0;
-		foreach ( $this->bookmarks as $name => $bookmark ) {
-			if ( '_' === $name[0] ) {
-				continue;
-			}
-
-			list( $depth, $element ) = explode( '_', $name );
-			if ( $depth === "{$this->depth}" ) {
-				return $element;
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * Indicates if the stack of open elements has an element in a given scope.
+	 * @see https://html.spec.whatwg.org/#generate-all-implied-end-tags-thoroughly
 	 *
-	 * @param $element
-	 * @param $scope
-	 * @return false
+	 * @param string|null $except_for_this_element Perform as if this element doesn't exist in the stack of open elements.
+	 * @return void
+	 * @throws WP_HTML_API_Unsupported_Exception
 	 */
-	private function has_in_scope( $element, $scope ) {
-		throw new WP_HTML_API_Unsupported_Exception( 'Cannot check for element in scope.');
-	}
+	private function generate_implied_end_tags_thoroughly( $except_for_this_element = null ) {
+		$current_node = $this->tag_openers->current_node();
 
-	public function next_tag( $query = null ) {
-		/*
-		 * The first thing that needs to happen when stepping through the HTML is to
-		 * close any void and self-closing elements. These appear on the open stack
-		 * to support matching CSS selectors and gauging depths, but they don't
-		 * truly have distinct openings and closings.
-		 */
-		if ( 0 < count( $this->open_elements ) ) {
-			$element = WP_HTML_Spec::element_info( end( $this->open_elements ) );
-			if ( $element::IS_VOID  || ( ! $element::IS_HTML && $this->has_self_closing_flag() ) ) {
-				array_pop( $this->open_elements );
-			}
-		}
+		$elements_with_implied_end_tags = array(
+			WP_HTMLCaptionElement::class,
+			WP_HTMLColgroupElement::class,
+			WP_HTMLDdElement::class,
+			WP_HTMLDtElement::class,
+			WP_HTMLLiElement::class,
+			WP_HTMLOptgroupElement::class,
+			WP_HTMLOptionElement::class,
+			WP_HTMLPElement::class,
+			WP_HTMLRbElement::class,
+			WP_HTMLRpElement::class,
+			WP_HTMLRtElement::class,
+			WP_HTMLRtcElement::class,
+			WP_HTMLTbodyElement::class,
+			WP_HTMLTdElement::class,
+			WP_HTMLTfootElement::class,
+			WP_HTMLThElement::class,
+			WP_HTMLTheadElement::class,
+			WP_HTMLTrElement::class,
+		);
 
-		if ( false === parent::next_tag( array( 'tag_closers' => 'visit' ) ) ) {
-			return false;
-		}
+		// @TODO: spot_bookmark needs to get "the current position".
+		$tag = $this->tag_bookmark();
+		$this->bookmarks[ $tag ]->end = $this->bookmarks[ $tag ]->start;
 
-		$tag_name = $this->get_tag();
-		$element = WP_HTML_Spec::element_info( $tag_name );
+		// @TODO: Use $this->tag_closers to compute "open" tags. We're probably duplicating
+		//        actual tag closers right now because we assume that if a tag is in the
+		//        openers list, it has no closing tag. This is probably wrong.
+		for ( $i = 0; $i < $this->tag_openers->count(); $i++ ) {
+			$current_node = $this->tag_openers->peek( $i );
+			$element      = $current_node->element;
 
-		$self_closes = $element::IS_VOID || ( ! $element::IS_HTML && $this->has_self_closing_flag() );
-		if ( $self_closes ) {
-			$this->open_elements[] = $tag_name;
-			$this->set_bookmark( '__open_elements_' . count( $this->open_elements ) );
-			return true;
-		}
-
-		if ( $this->is_tag_closer() ) {
-			$this->release_bookmark( '__open_elements_' . count( $this->open_elements ) );
-			array_pop( $this->open_elements );
-		} else {
-			$this->open_elements[] = $tag_name;
-			$this->set_bookmark( '__open_elements_' . count( $this->open_elements ) );
-		}
-
-		return true;
-	}
-
-	public function next_sibling() {
-		$starting_depth = count( $this->open_elements );
-
-		while ( $this->next_tag() ) {
-			$current_depth = count( $this->open_elements );
-
-			if ( ! $this->is_tag_closer() && $current_depth === $starting_depth ) {
-				return true;
+			if ( $element === $except_for_this_element || ! in_array( $element, $elements_with_implied_end_tags, true ) ) {
+				break;
 			}
 
-			if ( ! $this->is_tag_closer() && $current_depth < $starting_depth ) {
-				return false;
-			}
+			$this->tag_closers->push(
+				new WP_HTML_Element_Stack_Item(
+					$tag,
+					$current_node->element,
+					WP_HTML_Element_Stack_Item::IS_CLOSER,
+					$current_node
+				)
+			);
 		}
-
-		return false;
-	}
-
-	public function first_child() {
-		$starting_depth = count( $this->open_elements );
-
-		while ( $this->next_tag() ) {
-			$current_depth = count( $this->open_elements );
-
-			if ( ! $this->is_tag_closer() && $current_depth === $starting_depth + 1 ) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	public function seek( $bookmark_name ) {
