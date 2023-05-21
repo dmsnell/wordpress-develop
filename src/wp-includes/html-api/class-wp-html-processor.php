@@ -433,8 +433,6 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @throws WP_HTML_API_Unsupported_Exception
 	 */
 	private function generate_implied_end_tags( $except_for_this_element = null ) {
-		$current_node = $this->tag_openers->current_node();
-
 		$elements_with_implied_end_tags = array(
 			WP_HTMLDdElement::class,
 			WP_HTMLDtElement::class,
@@ -455,6 +453,8 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		// @TODO: Use $this->tag_closers to compute "open" tags. We're probably duplicating
 		//        actual tag closers right now because we assume that if a tag is in the
 		//        openers list, it has no closing tag. This is probably wrong.
+		//        We could be jumping into an already-parsed section via `seek()`, so we
+		//        have to determine if we're in opened tags or not.
 		for ( $i = 0; $i < $this->tag_openers->count(); $i++ ) {
 			$current_node = $this->tag_openers->peek( $i );
 			$element      = $current_node->element;
@@ -484,8 +484,6 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @throws WP_HTML_API_Unsupported_Exception
 	 */
 	private function generate_implied_end_tags_thoroughly( $except_for_this_element = null ) {
-		$current_node = $this->tag_openers->current_node();
-
 		$elements_with_implied_end_tags = array(
 			WP_HTMLCaptionElement::class,
 			WP_HTMLColgroupElement::class,
@@ -514,6 +512,8 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		// @TODO: Use $this->tag_closers to compute "open" tags. We're probably duplicating
 		//        actual tag closers right now because we assume that if a tag is in the
 		//        openers list, it has no closing tag. This is probably wrong.
+		//        We could be jumping into an already-parsed section via `seek()`, so we
+		//        have to determine if we're in opened tags or not.
 		for ( $i = 0; $i < $this->tag_openers->count(); $i++ ) {
 			$current_node = $this->tag_openers->peek( $i );
 			$element      = $current_node->element;
