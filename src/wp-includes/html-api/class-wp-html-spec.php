@@ -293,10 +293,36 @@ class WP_HTML_Spec {
 }
 
 class WP_HTML_Element_Meta {
+	/**
+	 * Whether the element only has a start tag and cannot have an ending tag.
+	 *
+	 * @see https://html.spec.whatwg.org/#void-elements
+	 */
 	const IS_VOID = false;
+
 	const IS_HTML = true;
+	/**
+	 * Whether the element has varying levels of special parsing rules.
+	 *
+	 * @see https://html.spec.whatwg.org/#special
+	 */
 	const IS_SPECIAL = false;
+
+	/**
+	 * Whether the element ends up in the list of active formatting elements.
+	 *
+	 * @see https://html.spec.whatwg.org/#formatting
+	 */
 	const IS_FORMATTING = false;
+
+	/**
+	 * Whether the element is entirely obsolete, and must not be used by authors.
+	 *
+	 * Obsolete elements must not be used, but they may still appear in markup
+	 * and must be supported by parsers.
+	 *
+	 * @see https://html.spec.whatwg.org/#non-conforming-features
+	 */
 	const IS_OBSOLETE = false;
 }
 
@@ -328,6 +354,7 @@ class WP_HTMLAddressElement extends WP_HTML_Element_Meta {
 }
 
 class WP_HTMLAppletElement extends WP_HTML_Element_Meta {
+	const IS_OBSOLETE = true;
 	const IS_SPECIAL = true;
 }
 

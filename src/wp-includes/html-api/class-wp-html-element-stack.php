@@ -58,8 +58,8 @@ class WP_HTML_Element_Stack {
 	 * @return boolean whether the given element is on the stack.
 	 */
 	public function has_element( $element ) {
-		for ( $i = count( $this->stack ) - 1; $i > 0; $i++ ) {
-			if ( $this->stack[ $i ]->element === $element ) {
+		for ( $i = 0; $i < $this->count(); $i++ ) {
+			if ( $this->peek( $i )->element === $element ) {
 				return true;
 			}
 		}
@@ -72,11 +72,11 @@ class WP_HTML_Element_Stack {
 	 *
 	 * @see https://html.spec.whatwg.org/#has-an-element-in-the-specific-scope
 	 *
-	 * @param string   $element The target node.
+	 * @param string   $target_node      The target node.
 	 * @param string[] $termination_list List of elements that terminate the search.
 	 * @return bool
 	 */
-	public function has_element_in_specific_scope( $element, $termination_list ) {
+	public function has_element_in_specific_scope( $target_node, $termination_list ) {
 		$i = $this->count();
 		if ( $i === 0 ) {
 			return false;
@@ -84,17 +84,21 @@ class WP_HTML_Element_Stack {
 
 		$node = $this->stack[ --$i ];
 
-		if ( $node->element === $element ) {
+		if ( $node->element === $target_node ) {
 			return true;
 		}
 
-		if ( in_array( $element, $termination_list, true ) ) {
+		if ( in_array( $target_node, $termination_list, true ) ) {
 			return false;
 		}
 
 		while ( $i > 0 && null !== ( $node = $this->stack[ --$i ] ) ) {
-			if ( $node->element === $element ) {
+			if ( $node->element === $target_node ) {
 				return true;
+			}
+
+			if ( in_array( $target_node, $termination_list, true ) ) {
+				return false;
 			}
 		}
 
