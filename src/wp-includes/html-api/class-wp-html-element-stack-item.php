@@ -37,7 +37,7 @@ class WP_HTML_Element_Stack_Item {
 	 */
 	public $related_item = null;
 
-	public function __construct( $bookmark_name, $element, $flags, $related_item = null ) {
+	public function __construct( $bookmark_name, $element, $flags = self::NO_FLAGS, $related_item = null ) {
 		$this->bookmark_name = $bookmark_name;
 		$this->element       = $element;
 		$this->flags         = $flags;

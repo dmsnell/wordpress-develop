@@ -9,17 +9,21 @@ class WP_HTML_Element_Stack {
 	public $stack = array();
 
 	/**
-	 * Returns a copy of the ith element on the stack for inspection.
+	 * Returns a copy of the nth element on the stack for inspection.
 	 *
-	 * @param int $nth_from_top Which item on the stack to return.
+	 * The top element is the oldest element on the stack. The 0th
+	 * element will therefore always be the last element added, the
+	 * 1st element will be the next-to-last element added, etc...
+	 *
+	 * @param int $nth_from_bottom Which item on the stack to return.
 	 * @return WP_HTML_Element_Stack_Item|null
 	 */
-	public function peek( $nth_from_top ) {
-		if ( $nth_from_top < 0 || $nth_from_top >= $this->count() ) {
+	public function peek( $nth_from_bottom ) {
+		if ( $nth_from_bottom < 0 || $nth_from_bottom >= $this->count() ) {
 			return null;
 		}
 
-		return $this->stack[ $this->count() - $nth_from_top - 1 ];
+		return $this->stack[ $this->count() - $nth_from_bottom - 1 ];
 	}
 
 	/**
@@ -34,6 +38,30 @@ class WP_HTML_Element_Stack {
 		$this->stack[] = $stack_item;
 	}
 
+	/**
+	 * Removes an item of a given value from the stack.
+	 *
+	 * @TODO: Should this be done by index? What performance
+	 *        tradeoffs are we making here by isolating the
+	 *        index from the callee? It's safer, but is it
+	 *        worth the cost?
+	 *
+	 * @TODO: Measure performance against `remove_at( $nth_from_bottom )`.
+	 *
+	 * @param string $stack_item Which item to remove.
+	 * @return bool Whether the item was removed.
+	 */
+	public function remove( $stack_item ) {
+		for ( $i = $this->count() - 1; $i >= 0; $i++ ) {
+			if ( $this->stack[ $i ] === $stack_item ) {
+				array_splice( $this->stack, $i, 1 );
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	public function count() {
 		return count( $this->stack );
 	}
@@ -46,7 +74,7 @@ class WP_HTML_Element_Stack {
 	public function current_node() {
 		$count = $this->count();
 
-		return $this->count() > 0
+		return $count > 0
 			? $this->stack[ $count - 1 ]
 			: null;
 	}

@@ -52,9 +52,18 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	private $tag_openers = null;
 
 	/**
-	 * @var WP_HTML_Element_Stack Referes to element closing tags.
+	 * @var WP_HTML_Element_Stack Refers to element closing tags.
 	 */
 	private $tag_closers = null;
+
+	/**
+	 * Used to handle mis-nested formatting element tags.
+	 *
+	 * @see https://html.spec.whatwg.org/#the-list-of-active-formatting-elements
+	 *
+	 * @var WP_HTML_Element_Stack
+	 */
+	private $active_formatting_elements = null;
 
 	/**
 	 * @var string Tree construction insertion mode.
@@ -141,8 +150,9 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	public function __construct( $html, $initial_mode = array( 'fragment', 'body' ), $encoding = 'utf8' ) {
 		parent::__construct( $html );
 
-		$this->tag_openers = new WP_HTML_Element_Stack();
-		$this->tag_closers = new WP_HTML_Element_Stack();
+		$this->tag_openers                = new WP_HTML_Element_Stack();
+		$this->tag_closers                = new WP_HTML_Element_Stack();
+		$this->active_formatting_elements = new WP_HTML_Element_Stack();
 
 		list( $parser_type, $initial_context ) = $initial_mode;
 
@@ -356,7 +366,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * Sets a non-prefixed bookmark for the current tag.
 	 *
 	 * @return string Name of the created bookmark.
-	 * @throws Exception
+	 * @throws WP_HTML_API_Unsupported_Exception
 	 */
 	private function tag_bookmark() {
 		$name = (string) ++$this->bookmark_id;
@@ -681,6 +691,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 *
 	 * @see https://html.spec.whatwg.org/#reset-the-insertion-mode-appropriately
 	 * @return void
+	 * @throws WP_HTML_API_Unsupported_Exception
 	 */
 	private function reset_insertion_mode_appropriately() {
 		$last = false;
@@ -783,6 +794,95 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 						return;
 					}
 			}
+		}
+	}
+
+	/**
+	 * Track a formatting element on the stack of active formatting elements.
+	 *
+	 * This is used to handle improperly closed or overlapping elements.
+	 *
+	 * @see https://html.spec.whatwg.org/#push-onto-the-list-of-active-formatting-elements
+	 *
+	 * @param string $element Which element to push onto the list of active formatting elements.
+	 * @return void
+	 * @throws WP_HTML_API_Unsupported_Exception
+	 */
+	private function push_onto_list_of_active_formatting_elements( $element ) {
+		$same_element_count = 0;
+		for ( $i = 0; $i < $this->active_formatting_elements->count(); $i++ ) {
+			$stack_element = $this->active_formatting_elements->peek( $i );
+
+			if ( $stack_element->element === WP_HTMLMarker::class ) {
+				break;
+			}
+
+			if ( $stack_element->element !== $element ) {
+				continue;
+			}
+
+			/*
+			 * @TODO: Implement the "Noah's Ark Clause" by parsing and comparing
+			 *        the attributes within each element. For now we assume that
+			 *        if the tag name matches, it's the same element, but this
+			 *        is wrong according to the specification.
+			 */
+			if ( 3 >= ++$same_element_count ) {
+				$this->active_formatting_elements->remove( $stack_element );
+				break;
+			}
+		}
+
+		$this->active_formatting_elements->push( new WP_HTML_Element_Stack_Item( $this->tag_bookmark(), $element ) );
+	}
+
+	/**
+	 * Reconstructs the active formatting elements.
+	 *
+	 * @see https://html.spec.whatwg.org/#reconstruct-the-active-formatting-elements
+	 *
+	 * @return bool Whether any formatting elements were reconstructed.
+	 * @throws WP_HTML_API_Unsupported_Exception
+	 */
+	public function reconstruct_active_formatting_elements() {
+		if ( 0 === $this->active_formatting_elements->count() ) {
+			return false;
+		}
+
+		$last_entry = $this->active_formatting_elements->current_node();
+		if ( $last_entry->element === WP_HTMLMarker::class ) {
+			return false;
+		}
+
+		if ( $this->tag_openers->has_element( $last_entry->element ) ) {
+			return false;
+		}
+
+		throw new WP_HTML_API_Unsupported_Exception( 'Cannot reconstruct the active formatting elements.' );
+	}
+
+	/**
+	 * Clears the list of active formatting elements up to the last marker.
+	 *
+	 * @see https://html.spec.whatwg.org/#clear-the-list-of-active-formatting-elements-up-to-the-last-marker
+	 *
+	 * @return void
+	 */
+	public function clear_list_of_formatting_elements_up_to_the_last_marker() {
+		$to_remove = array();
+
+		for ( $i = 0; $i < $this->active_formatting_elements->count(); $i++ ) {
+			$stack_item = $this->active_formatting_elements->peek( $i );
+
+			if ( $stack_item->element === WP_HTMLMarker::class ) {
+				break;
+			}
+
+			$to_remove[] = $stack_item;
+		}
+
+		for ( $i = 0; $i < count( $to_remove ); $i++ ) {
+			$this->active_formatting_elements->remove( $to_remove[ $i ] );
 		}
 	}
 }

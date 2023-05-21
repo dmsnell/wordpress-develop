@@ -326,6 +326,10 @@ class WP_HTML_Element_Meta {
 	const IS_OBSOLETE = false;
 }
 
+class WP_HTMLMarker extends WP_HTML_Element_Meta {
+
+}
+
 class WP_HTMLElement extends WP_HTML_Element_Meta {
 }
 
