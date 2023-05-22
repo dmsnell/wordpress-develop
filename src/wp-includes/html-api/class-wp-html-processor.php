@@ -37,6 +37,15 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	const AFTER_AFTER_BODY = 'after-after-body';
 	const AFTER_AFTER_FRAMESET = 'after-after-frameset';
 
+	/*
+	 * These don't have to be globally unique; as constants they
+	 * are provided as a means to link the strings to the meanings
+     * but their text values are provided as a convenience for
+	 * calling functions and sccripts.
+	 */
+	const FULL_PARSER = 'full';
+	const FRAGMENT_PARSER = 'fragment';
+
 
 	private $depth = 0;
 	private static $query = array( 'tag_closers' => 'visit' );
@@ -121,6 +130,78 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	private $template_insertion_mode_stack = array();
 
 	/**
+	 * Create an HTML processor in the full HTML parsing mode.
+	 *
+	 * Use this for cases where you have an entire HTML document from
+	 * the start to the end. If you have a section of HTML that's part
+	 * of a bigger document, then use `createFragment()` instead.
+	 *
+	 * @TODO: Proper version number.
+	 * @since 6.3.0
+	 *
+	 * @param string $html     Input HTML document to process.
+	 * @param string $encoding Text encoding of the document; only supported value is 'utf-8'.
+	 * @return WP_HTML_Processor|null The created processor if successfull, otherwise null.
+	 */
+	public static function createDocument( $html, $encoding = 'utf-8' ) {
+		$options = array(
+			'parser_mode'    => self::FULL_PARSER,
+			'insertion_mode' => self::INITIAL_MODE,
+			'context_node'   => null,
+		);
+
+		return new self( $html, $options, $encoding );
+	}
+
+	/**
+	 * Create an HTML processor in the fragment parsing mode.
+	 *
+	 * Use this for cases where you are processing chunks of HTML that
+	 * will be found within a bigger HTML document, such as rendered
+	 * block output that exists within a post, `the_content` inside a
+	 * rendered site layout.
+	 *
+	 * Fragment parsing occurs within a context, which is an HTML element
+	 * that the document will eventually be placed in. It becomes important
+	 * when special elements have different rules than others, such as inside
+	 * a TEXTAREA or a TITLE tag where things that look like tags are text,
+	 * or inside a SCRIPT tag where things that look like HTML syntax are JS.
+	 *
+	 * The context value should be a representation of the tag into which the
+	 * HTML is found. For most cases this will be the body element. The HTML
+	 * form is provided because a context element may have attributes that
+	 * impact the parse, such as with a SCRIPT tag and its `type` attribute.
+	 *
+	 * @TODO: Proper version number.
+	 * @since 6.3.0
+	 *
+	 * @param string $html     Input HTML fragment to process.
+	 * @param string $context  Context element for the fragment, defaults to `<body>`.
+	 * @param string $encoding Text encoding of the document; only supported value is 'utf-8'.
+	 * @return WP_HTML_Processor|null The created processor if successfull, otherwise null.
+	 */
+	public static function createFragment( $html, $context = '<body>', $encoding = 'utf8' ) {
+		$p = new WP_HTML_Tag_Processor( $context );
+		if ( ! $p->next_tag() ) {
+			return null;
+		}
+
+		$context_node = WP_HTML_Spec::element_info( $p->next_tag() );
+		$context_attributes = array();
+		foreach ( $p->get_attribute_names_with_prefix( '' ) as $attribute_name ) {
+			$context_attributes[ $attribute_name ] = $p->get_attribute( $attribute_name );
+		}
+
+		$options = array(
+			'parser_mode'    => self::FRAGMENT_PARSER,
+			'insertion_mode' => null,
+			'context_node'   => array( $context_node, $context_attributes ),
+		);
+
+		return new self( $html, $options, $encoding );
+	}
+
+	/**
 	 * Create a new HTML Processor for reading and modifying HTML structure.
 	 *
 	 * ## Initial mode
@@ -158,43 +239,28 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @param string[] $initial_mode Initial mode for parser, if provided. Defaults to a fragment parser in the BODY element.
 	 * @param string $encoding Must be utf-8
 	 */
-	public function __construct( $html, $initial_mode = array( 'fragment', 'body' ), $encoding = 'utf8' ) {
+	public function __construct( $html, $use_the_static_create_functions_instead ) {
 		parent::__construct( $html );
 
 		$this->tag_openers                = new WP_HTML_Element_Stack();
 		$this->tag_closers                = new WP_HTML_Element_Stack();
 		$this->active_formatting_elements = new WP_HTML_Element_Stack();
 
-		list( $parser_type, $initial_context ) = $initial_mode;
+		$initial_state = $use_the_static_create_functions_instead;
+		$this->insertion_mode = $initial_state['insertion_mode'];
 
-		switch ( $parser_type ) {
-			// Can we convert a full parser into a fragment parser re-using the existing
-			// intial parsing state? E.g. is [ 'full', WP_HTML_Processor:IN_BODY ] the same as  [ 'fragment', '<body>' ]
-			case 'full':
-				$this->insertion_mode = $initial_context;
-				break;
+		if ( self::FRAGMENT_PARSER === $initial_state['parser_mode'] ) {
+			$this->context_node = array( $initial_state['context_node'], $initial_state['context_attributes'] );
 
-			case 'fragment':
-				$p = new WP_HTML_Tag_Processor( $initial_context );
-				$p->next_tag();
-				$context_node = WP_HTML_Spec::element_info( $p->next_tag() );
-				$context_attributes = array();
-				foreach ( $p->get_attribute_names_with_prefix( '' ) as $attribute_name ) {
-					$context_attributes[ $attribute_name ] = $p->get_attribute( $attribute_name );
-				}
-
-				$this->context_node = array( $context_node, $context_attributes );
-
-				$this->tag_openers->push(
-					new WP_HTML_Element_Stack_Item(
-						$this->spot_bookmark( 0 ),
-						'HTML',
-						WP_HTML_Element_Stack_Item::NO_FLAGS
-					)
-				);
-
-				// Create the context node somehow. We can't/don't want to prepend it
-				// to the HTML, unless we _can_ do that without disturbing the output.
+			// @TODO: Put this somewhere.
+			// @TODO: How can we bookmark this without having an instance yet?
+			$this->tag_openers->push(
+				new WP_HTML_Element_Stack_Item(
+					$this->spot_bookmark( 0 ),
+					'HTML',
+					WP_HTML_Element_Stack_Item::NO_FLAGS
+				)
+			);
 		}
 	}
 
@@ -228,7 +294,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			 * Exceptions are used in this class to escape deep call stacks that
 			 * otherwise might involve messier calling and return conventions.
 			 */
-			return false;
+			return self::NOT_IMPLEMENTED_YET;
 		}
 	}
 
@@ -262,12 +328,24 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		$op_sigil = $this->is_tag_closer() ? '-' : '+';
 		$op       = "{$op_sigil}{$tag_name}";
 
+		/*
+		 * @TODO: What's up with reconstructing active formatting elements for
+		 *        text within IN_BODY? How can we get into this situation?
+		 */
+
 		switch ( $op ) {
+			case '+DOCTYPE':
+				goto ignored;
+
 			/*
 			 * > A start tag whose tag name is "html"
 			 */
 			case '+HTML':
-				goto ignored;
+				if ( $this->has_element_on_stack_of_open_elements( WP_HTMLTemplateElement::class ) ) {
+					goto ignored;
+				} else {
+					throw new WP_HTML_API_Unsupported_Exception( 'Cannot add inner HTML attributes to outer HTML element.' );
+				}
 
 			/*
 			 * > A start tag whose tag name is one of: "base", "basefont", "bgsound",
@@ -286,19 +364,42 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			case '+TEMPLATE':
 			case '+TITLE':
 			case '-TEMPLATE':
+				// @TODO: Do we need to back up one more character?
 				parent::seek( 'current' );
-				$this->insertion_mode = 'in-head';
+				$this->insertion_mode = self::IN_HEAD;
 				return $this->step();
 
 			/*
 			 * > A start tag whose tag name is "body"
 			 */
 			case '+BODY':
-				goto ignored;
+				/*
+				 * @TODO: There is an unsupported case for adding attributes to an open
+				 *        BODY tag, but also a confusing description.
+				 *
+				 * > If the second element on the stack of open elements is not a body element,
+				 * > if the stack of open elements has only one node on it, or if there is a
+				 * > template element on the stack of open elements, then ignore the token. (fragment case)
+				 *
+				 * Why the "second element"?   --> is this a fragment in "<body>" context?
+				 * Why if only a single node?  --> have we closed the context element?
+				 *
+				 * In a fragment case the first element on the stack of open elements will _always_
+				 * be HTML _root_ with _no attributes_, and the second element on the stack will be
+				 * the context node with its attributes.
+				 */
+				if ( false || false || $this->has_element_on_stack_of_open_elements( WP_HTMLTemplateElement::class ) ) {
+					goto ignored;
+				} else {
+					throw new WP_HTML_API_Unsupported_Exception( 'Cannot add inner BODY attributes to outer BODY element.' );
+				}
 
 
 			/*
 			 * > A start tag whose tag name is "frameset"
+			 *
+			 * @TODO: Framesets apparently refuse to exist within BODY tags.
+			 *        But we still need to skip their children when we encounter them.
 			 */
 			case '+FRAMESET':
 				throw new WP_HTML_API_Unsupported_Exception( 'Cannot process FRAMESET elements.');
@@ -553,6 +654,17 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		}
 
 		$this->depth = $max_depth;
+	}
+
+	/**
+	 * Determines if an element exists on the stack of open elements.
+	 *
+	 * @param string $element Which element to find.
+	 * @return boolean
+	 * @throws WP_HTML_API_Unsupported_Exception
+	 */
+	private function has_element_on_stack_of_open_elements( $element ) {
+		throw new WP_HTML_API_Unsupported_Exception();
 	}
 
 	private function find_closing_tag() {
