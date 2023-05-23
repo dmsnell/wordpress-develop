@@ -192,13 +192,21 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			$context_attributes[ $attribute_name ] = $p->get_attribute( $attribute_name );
 		}
 
+		// @TODO: we have to manually "pump" the tokenizer to skip the initial content.
+		$h = new self( $html );
+		switch ( $context_node ) {
+			case WP_HTMLTitleElement::class:
+			case WP_HTMLTextareaElement::class:
+				$h->
+		}
+
 		$options = array(
 			'parser_mode'    => self::FRAGMENT_PARSER,
 			'insertion_mode' => null,
 			'context_node'   => array( $context_node, $context_attributes ),
 		);
 
-		return new self( $html, $options, $encoding );
+		return $h;
 	}
 
 	/**
