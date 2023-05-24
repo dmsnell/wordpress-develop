@@ -325,9 +325,9 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @see https://html.spec.whatwg.org/#parsing-main-inbody
 	 *
 	 * @return boolean Whether an element was found.
+	 * @throws WP_HTML_API_Unsupported_Exception
 	 */
 	private function step_in_body() {
-		ignored:
 		if ( ! $this->next_tag( self::$query ) ) {
 			return false;
 		}
@@ -343,14 +343,14 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 
 		switch ( $op ) {
 			case '+DOCTYPE':
-				goto ignored;
+				return $this->step_in_body();
 
 			/*
 			 * > A start tag whose tag name is "html"
 			 */
 			case '+HTML':
 				if ( $this->has_element_on_stack_of_open_elements( WP_HTMLTemplateElement::class ) ) {
-					goto ignored;
+					return $this->step_in_body();
 				} else {
 					throw new WP_HTML_API_Unsupported_Exception( 'Cannot add inner HTML attributes to outer HTML element.' );
 				}
@@ -397,7 +397,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 				 * the context node with its attributes.
 				 */
 				if ( false || false || $this->has_element_on_stack_of_open_elements( WP_HTMLTemplateElement::class ) ) {
-					goto ignored;
+					return $this->step_in_body();
 				} else {
 					throw new WP_HTML_API_Unsupported_Exception( 'Cannot add inner BODY attributes to outer BODY element.' );
 				}
