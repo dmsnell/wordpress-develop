@@ -47,6 +47,15 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	const FRAGMENT_PARSER = 'fragment';
 
 
+	/*
+	 * In some cases a transition to another insertion mode is followed
+	 * by reprocessing the existing token in the stream. These constants
+	 * indicate whether that should happen.
+	 */
+	const REPROCESS_THIS_NODE = 'reprocess-this-node';
+	const PROCESS_NEXT_NODE = 'process-next-node';
+
+
 	private $depth = 0;
 	private static $query = array( 'tag_closers' => 'visit' );
 
@@ -121,6 +130,15 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	private $original_insertion_mode = null;
 
 	/**
+	 * Specifies whether FRAMESET elements can be processed in the current mode.
+	 *
+	 * @see https://html.spec.whatwg.org/#frameset-ok-flag
+	 *
+	 * @var bool
+	 */
+	private $frameset_ok = true;
+
+	/**
 	 * Stack of template insertion modes.
 	 *
 	 * Not implemented yet.
@@ -128,6 +146,16 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @var string[]
 	 */
 	private $template_insertion_mode_stack = array();
+
+	/**
+	 * Indicates if the stack of open elements contains a TEMPLATE element.
+	 *
+	 * This is an optimization to bypass scanning the stack of open elements
+	 * in less common cases.
+	 *
+	 * @var bool
+	 */
+	private $template_element_is_on_stack_of_open_elements = false;
 
 	/**
 	 * Create an HTML processor in the full HTML parsing mode.
@@ -283,14 +311,24 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * domain of the fragment parsing algorithm this method will abort
 	 * and return `false`.
 	 *
-	 * @param string $insertion_mode Starting insertion mode for parser, best to leave as the default value
-	 *                               unless knowingly handling HTML that will be included inside known tags.
+	 * @param string $node_to_process Indicates if the current or next token should be processed.
 	 *
 	 * @return boolean Whether an element was found.
 	 */
-	public function step( $insertion_mode = null ) {
+	public function step( $node_to_process = self::PROCESS_NEXT_NODE ) {
+		if ( self::PROCESS_NEXT_NODE === $node_to_process ) {
+			$this->next_tag( self::$query );
+		}
+
+		// Finish stepping when there are no more tokens in the document.
+		if ( null === $this->get_tag() ) {
+			return false;
+		}
+
+		parent::set_bookmark( 'here' );
+
 		try {
-			switch ( $insertion_mode ?: $this->insertion_mode ) {
+			switch ( $this->insertion_mode ) {
 				case self::IN_BODY:
 					return $this->step_in_body();
 
@@ -328,10 +366,6 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @throws WP_HTML_API_Unsupported_Exception
 	 */
 	private function step_in_body() {
-		if ( ! $this->next_tag( self::$query ) ) {
-			return false;
-		}
-
 		$tag_name = $this->get_tag();
 		$op_sigil = $this->is_tag_closer() ? '-' : '+';
 		$op       = "{$op_sigil}{$tag_name}";
@@ -343,14 +377,16 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 
 		switch ( $op ) {
 			case '+DOCTYPE':
-				return $this->step_in_body();
+				// Ignore the token.
+				return $this->step();
 
 			/*
 			 * > A start tag whose tag name is "html"
 			 */
 			case '+HTML':
-				if ( $this->has_element_on_stack_of_open_elements( WP_HTMLTemplateElement::class ) ) {
-					return $this->step_in_body();
+				if ( $this->template_element_is_on_stack_of_open_elements ) {
+					// Ignore the token.
+					return $this->step();
 				} else {
 					throw new WP_HTML_API_Unsupported_Exception( 'Cannot add inner HTML attributes to outer HTML element.' );
 				}
@@ -372,33 +408,35 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			case '+TEMPLATE':
 			case '+TITLE':
 			case '-TEMPLATE':
-				// @TODO: Do we need to back up one more character?
-				parent::seek( 'current' );
 				$this->insertion_mode = self::IN_HEAD;
-				return $this->step();
+				return $this->step( self::REPROCESS_THIS_NODE );
 
 			/*
 			 * > A start tag whose tag name is "body"
 			 */
 			case '+BODY':
 				/*
-				 * @TODO: There is an unsupported case for adding attributes to an open
-				 *        BODY tag, but also a confusing description.
-				 *
 				 * > If the second element on the stack of open elements is not a body element,
 				 * > if the stack of open elements has only one node on it, or if there is a
 				 * > template element on the stack of open elements, then ignore the token. (fragment case)
 				 *
-				 * Why the "second element"?   --> is this a fragment in "<body>" context?
-				 * Why if only a single node?  --> have we closed the context element?
-				 *
 				 * In a fragment case the first element on the stack of open elements will _always_
 				 * be HTML _root_ with _no attributes_, and the second element on the stack will be
-				 * the context node with its attributes.
+				 * the context node with its attributes. If the stack of open elements is only one
+				 * element deep it implies that the BODY has been closed, _or_ in the case of a fragment
+				 * parser, that there's no available BODY onto which to add new attributes.
 				 */
-				if ( false || false || $this->has_element_on_stack_of_open_elements( WP_HTMLTemplateElement::class ) ) {
-					return $this->step_in_body();
+				if (
+					// @TODO: Should this be tag_openers of some "stack_of_open_elements".
+					1 === $this->tag_openers->count() ||
+					( $this->context_node && WP_HTMLBodyElement::class !== $this->context_node[0] ) ||
+					$this->template_element_is_on_stack_of_open_elements
+				) {
+					// Ignore the token.
+					return $this->step();
 				} else {
+					// @TODO: We could ignore this, but it could mess up CSS selectors. Do we support that?
+					//        In always ignoring it we cut out all this cumbersome detection logic.
 					throw new WP_HTML_API_Unsupported_Exception( 'Cannot add inner BODY attributes to outer BODY element.' );
 				}
 
@@ -410,6 +448,20 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			 *        But we still need to skip their children when we encounter them.
 			 */
 			case '+FRAMESET':
+				if (
+					1 === $this->tag_openers->count() ||
+					( $this->context_node && WP_HTMLBodyElement::class !== $this->context_node[0] ) ||
+					! $this->frameset_ok
+				) {
+					// Ignore the token.
+					return $this->step();
+				}
+
+				/*
+				 * When encountering a FRAMESET in this state it should climb to the top of the DOM
+				 * tree under the HTML element and adopt all of the current open nodes, then switch
+				 * to self::IN_FRAMESET insertion mode.
+				 */
 				throw new WP_HTML_API_Unsupported_Exception( 'Cannot process FRAMESET elements.');
 
 			/*
@@ -424,8 +476,27 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 				 * @TODO: We didn't construct an open HTML or BODY tag, but we have to make a choice here based on that.
 				 *        Probably need to create these _or_ assume this will always transfer to "after body".
 				 */
-				$this->insertion_mode = 'after-body';
-				return true;
+				if ( ! $this->tag_openers->has_element_in_particular_scope( WP_HTMLBodyElement::class ) ) {
+					// Ignore the token.
+					return $this->step();
+				}
+
+				/*
+				 * > if there is a node in the stack of open elements that is not either a dd element,
+				 * > a dt element, an li element, an optgroup element, an option element, a p element,
+				 * > an rb element, an rp element, an rt element, an rtc element, a tbody element,
+				 * > a td element, a tfoot element, a th element, a thead element, a tr element,
+				 * > the body element, or the html element, then this is a parse error.
+				 *
+				 * Parse errors do not affect anything so there is nothing required to handle these cases.
+				 */
+
+				$this->insertion_mode = self::AFTER_BODY;
+				return $this->step(
+					'HTML' === $tag_name
+						? self::REPROCESS_THIS_NODE
+						: self::PROCESS_NEXT_NODE
+				);
 
 			/*
 			 * > A start tag whose tag name is one of: "address", "article", "aside", "blockquote", "center",
@@ -457,12 +528,127 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			case '+SECTION':
 			case '+SUMMARY':
 			case '+UL':
-				if ( $this->has_in_scope( 'P', 'BUTTON' ) ) {
+				if ( $this->tag_openers->has_element_in_button_scope( WP_HTMLPElement::class ) ) {
 					$this->close_p_element();
 				}
 
-				$this->enter_element( $tag_name );
-				return;
+				// @TODO: We need to push the item onto the stack. Anything else?
+				$this->insert_html_element();
+				return true;
+
+			case '+H1':
+			case '+H2':
+			case '+H3':
+			case '+H4':
+			case '+H5':
+			case '+H6':
+				if ( $this->tag_openers->has_element_in_button_scope( WP_HTMLPElement::class ) ) {
+					$this->close_p_element();
+				}
+
+				switch ( $this->tag_openers->current_node()->element ) {
+					case WP_HTMLH1Element::class:
+					case WP_HTMLH2Element::class:
+					case WP_HTMLH3Element::class:
+					case WP_HTMLH4Element::class:
+					case WP_HTMLH5Element::class:
+					case WP_HTMLH6Element::class:
+						/*
+						 * > If the current node is an HTML element whose tag name is one of
+						 * > "h1", "h2", "h3", "h4", "h5", or "h6", then this is a parse error;
+						 * > pop the current node off the stack of open elements.
+						 *
+						 * If encountering a heading element inside another, the open one implicitly
+						 * closes and the new one opens. Not sure why here we don't "close" the first
+						 * one but effectively it does that.
+						 *
+						 * @TODO: Is this different when reconstructing the active formats from a P?
+						 */
+						$this->pop_node_off_of_stack_of_open_elements();
+				}
+
+				$this->insert_html_element();
+				return true;
+
+
+			case '+PRE':
+			case '+LISTING':
+				if ( $this->tag_openers->has_element_in_button_scope( WP_HTMLPElement::class ) ) {
+					$this->close_p_element();
+				}
+
+				$this->insert_html_element();
+
+				/*
+				 * > If the next token is a U+000A LINE FEED (LF) character token, then ignore that
+				 * > token and move on to the next one. (Newlines at the start of pre blocks are
+				 * > ignored as an authoring convenience.)
+				 *
+				 * Ignoring this here so that the function getting content can handle it.
+				 */
+				$this->frameset_ok = false;
+				return true;
+
+			case '+FORM':
+				if ( null !== $this->form_element_pointer && ! $this->template_element_is_on_stack_of_open_elements ) {
+					// Ignore the token.
+					return $this->step();
+				}
+
+				if ( $this->tag_openers->has_element_in_button_scope( WP_HTMLPElement::class ) ) {
+					$this->close_p_element();
+				}
+
+				$this->insert_html_element();
+				if ( ! $this->template_element_is_on_stack_of_open_elements ) {
+					$this->form_element_pointer = $this->get_bookmark_of_current_element();
+				}
+				return true;
+
+			case '+LI':
+				$this->frameset_ok = false;
+				throw new WP_HTML_API_Unsupported_Exception( 'Cannot descend into LI nodes yet.' );
+
+				/*
+				 * @TODO: Fix this logic.
+				 *
+				 * When encountering an LI close out all of the previous elements up to the containing LI,
+				 * then close the containing LI, then open this LI.
+				 *
+				 * If there are markers or special nodes that remove the containing LIs from the scope then
+				 * there's no need to close anything - they are structurally separated.
+				 */
+				$node = $this->tag_openers->current_node();
+				while ( WP_HTMLLiElement::class === $node->element ) {
+					$this->generate_implied_end_tags( WP_HTMLLiElement::class );
+
+					while ( WP_HTMLLiElement::class !== $this->pop_element_from_stack_of_open_elements() ) {
+						continue;
+					}
+
+					if ( $this->tag_openers->has_element_in_button_scope( WP_HTMLPElement::class ) ) {
+						$this->close_p_element();
+						$this->insert_html_element();
+						return true;
+					}
+
+					$element = $node->element;
+					if (
+						$element::IS_SPECIAL &&
+						WP_HTMLAddressElement::class !== $element &&
+						WP_HTMLDivElement::class !== $element &&
+						WP_HTMLPElement::class !== $element
+					) {
+						$this->close_p_element();
+						$this->insert_html_element();
+						return true;
+					}
+
+					// @TODO: Reset $node to next higher item in stack.
+				}
+
+				throw new Exception( 'This should never be reachable.' );
+
 
 			/*
 			 * > An end-of-file token
