@@ -649,6 +649,82 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 
 				throw new Exception( 'This should never be reachable.' );
 
+			case '+DD':
+			case '+DT':
+				// @TODO: This is just like the LI case, but different in that it has two loops.
+				throw new WP_HTML_API_Unsupported_Exception( 'Cannot process DD or DT elementes yet.' );
+
+			case '+PLAINTEXT':
+				if ( $this->tag_openers->has_element_in_button_scope( WP_HTMLPElement::class ) ) {
+					$this->close_p_element();
+				}
+
+				// @TODO: Close the parser at this point. We might need to invent an insertion mode
+				//        that means "stop processing all elements."
+				$this->insert_html_element();
+				return true;
+
+			case '+BUTTON':
+				if ( $this->tag_openers->has_element_in_specific_scope( WP_HTMLButtonElement::class ) ) {
+					$this->generate_implied_end_tags();
+
+					// @TODO: Pop elements off of the open elements stack until a BUTTON has been removed.
+				}
+
+				$this->reconstruct_active_formatting_elements();
+				$this->insert_html_element();
+				$this->frameset_ok = false;
+				return true;
+
+			case '-ADDRESS':
+			case '-ARTICLE':
+			case '-ASIDE':
+			case '-BLOCKQUOTE':
+			case '-BUTTON':
+			case '-CENTER':
+			case '-DETAILS':
+			case '-DIALOG':
+			case '-DIR':
+			case '-DIV':
+			case '-DL':
+			case '-FIELDSET':
+			case '-FIGCAPTION':
+			case '-FIGURE':
+			case '-FOOTER':
+			case '-HEADER':
+			case '-HGROUP':
+			case '-LISTING':
+			case '-MAIN':
+			case '-MENU':
+			case '-NAV':
+			case '-OL':
+			case '-PRE':
+			case '-SEARCH':
+			case '-SECTION':
+			case '-SUMMARY':
+			case '-UL':
+				if ( ! $this->tag_openers->has_element_in_particular_scope( WP_HTML_Spec::element_info( $tag_name ) ) ) {
+					// Ignore token.
+					return $this->step();
+				}
+
+				$this->generate_implied_end_tags();
+
+				// @TODO: Should we mark parse errors?
+				// @TODO: Pop elements off of the open elements stack until a BUTTON has been removed.
+				return true;
+
+			case '-FORM':
+				if ( ! $this->template_element_is_on_stack_of_open_elements ) {
+					// @TODO: Implement
+					throw new WP_HTML_API_Unsupported_Exception( 'Cannot process FORM elements.' );
+				} else {
+					// @TODO: Implement
+					throw new WP_HTML_API_Unsupported_Exception( 'Cannot process FORM elements.' );
+				}
+
+			case '-P':
+				throw new WP_HTML_API_Unsupported_Exception( 'Cannot process P elements.' );
 
 			/*
 			 * > An end-of-file token
