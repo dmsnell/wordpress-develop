@@ -266,7 +266,7 @@ class WP_Block {
 
 			$block_content = (string) call_user_func( $this->block_type->render_callback, $this->attributes, $block_content, $this );
 			if ( str_contains( $block_content, 'data-wp-' ) ) {
-				$block_content .= get_comment_delimited_block_content(
+				$block_content = get_comment_delimited_block_content(
 					'core/interactivity-wrapper',
 					[ 'blockName' => $this->name ],
 					$block_content

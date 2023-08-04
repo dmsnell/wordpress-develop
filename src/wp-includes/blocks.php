@@ -1180,7 +1180,7 @@ function do_blocks( $content ) {
 
 	file_put_contents( '/Users/dmsnell/Downloads/block-output-interactivity.json', json_encode( parse_blocks( $output ), JSON_PRETTY_PRINT ) );
 
-	return "<div style='white-space: pre;'>" .( esc_html( print_r( parse_blocks( $output ), true ) ) ) . "</div>";
+	return $output;
 }
 
 /**
