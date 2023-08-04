@@ -241,7 +241,16 @@ class WP_Block {
 						/** This filter is documented in wp-includes/blocks.php */
 						$inner_block->context = apply_filters( 'render_block_context', $inner_block->context, $inner_block->parsed_block, $parent_block );
 
-						$block_content .= $inner_block->render();
+						$block_render = $inner_block->render();
+						if ( str_contains( $block_render, 'data-wp-' ) ) {
+							$block_content .= get_comment_delimited_block_content(
+								'core/interactivity-wrapper',
+								[ 'blockName' => $inner_block->name ],
+								$block_render
+							);
+						} else {
+							$block_content .= $block_render;
+						}
 					}
 
 					$index++;
@@ -256,6 +265,13 @@ class WP_Block {
 			WP_Block_Supports::$block_to_render = $this->parsed_block;
 
 			$block_content = (string) call_user_func( $this->block_type->render_callback, $this->attributes, $block_content, $this );
+			if ( str_contains( $block_content, 'data-wp-' ) ) {
+				$block_content .= get_comment_delimited_block_content(
+					'core/interactivity-wrapper',
+					[ 'blockName' => $this->name ],
+					$block_content
+				);
+			}
 
 			WP_Block_Supports::$block_to_render = $parent;
 
