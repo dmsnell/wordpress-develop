@@ -6,7 +6,8 @@ var installChanged = require( 'install-changed' );
 var json2php = require( 'json2php' );
 
 module.exports = function(grunt) {
-	var path = require('path'),
+	var Buffer = require( 'buffer' ).Buffer,
+		path = require('path'),
 		fs = require( 'fs' ),
 		glob = require( 'glob' ),
 		assert = require( 'assert' ).strict,
@@ -1600,38 +1601,115 @@ module.exports = function(grunt) {
 	 * @ticket 24994
 	 * @ticket 46218
 	 */
-	grunt.registerTask( 'verify:source-maps', function() {
+	grunt.registerTask( 'verify:source-maps', async function() {
+		const done = this.async();
+
 		const ignoredFiles = [
 			'build/wp-includes/js/dist/components.js'
 		];
-		const files = buildFiles.reduce( ( acc, path ) => {
+
+		/** @var {string[]} File paths for files to scan for source maps. */
+		const files = [];
+
+		/** @var {Promise[]} Tracks the progress of finding files to scan. */
+		const fileSearch = [];
+
+		for ( const globPattern of buildFiles ) {
 			// Skip excluded paths and any path that isn't a file.
-			if ( '!' === path[0] || '**' !== path.substr( -2 ) ) {
-				return acc;
+			if ( '!' === globPattern[0] || ! globPattern.endsWith( '**' ) ) {
+				continue;
 			}
-			acc.push( ...glob.sync( `${ BUILD_DIR }/${ path }/*.js` ) );
-			return acc;
-		}, [] );
+
+			fileSearch.push( new Promise( ( resolve, reject ) => {
+				glob( `${ BUILD_DIR }/${ globPattern }/*.js`, ( error, matches ) => {
+					if ( null !== error ) {
+						reject();
+						return;
+					}
+
+					if ( matches.length > 0 ) {
+						files.push.apply( files, matches );
+					}
+					resolve();
+				} );
+			} ) );
+		}
+
+		await Promise.all( fileSearch );
 
 		assert(
 			files.length > 0,
 			'No JavaScript files found in the build directory.'
 		);
 
-		files
-			.filter(file => ! ignoredFiles.includes( file) )
-			.forEach( function( file ) {
-				const contents = fs.readFileSync( file, {
-					encoding: 'utf8',
-				} );
-				// `data:` URLs are allowed:
-				const match = contents.match( /sourceMappingURL=((?!data:).)/ );
+		const sourceMapSearch = [];
 
-				assert(
-					match === null,
-					`The ${ file } file must not contain a sourceMappingURL.`
-				);
-			} );
+		/** @var {Buffer} Contains source map indicator. */
+		const searchToken = Buffer.from( 'sourceMappingURL=', 'utf8' );
+		const dataUriToken = Buffer.from( 'sourceMappingURL=data:', 'utf8' );
+
+		for ( const filePath of files ) {
+			if ( ignoredFiles.includes( filePath ) ) {
+				continue;
+			}
+
+			sourceMapSearch.push( new Promise( ( resolve, reject ) => {
+				fs.open( filePath, ( error, fd ) => {
+					if ( null !== error ) {
+						reject( error );
+						return;
+					}
+
+					const BUFFER_SIZE_BYTES = 64 * 1024;
+					const START_OF_BUFFER = 0;
+					const buffer = Buffer.alloc( BUFFER_SIZE_BYTES + dataUriToken.byteLength );
+
+					/** @param {number} position Byte offset at which to start reading next chunk. */
+					const scanNextChunk = ( position ) => {
+						fs.read(
+							fd,
+							buffer,
+							START_OF_BUFFER,
+							BUFFER_SIZE_BYTES,
+							// Ensure we capture the entire search pattern in this chunk.
+							position,
+							/** @param {Buffer} chunk Next read chunk from file. */
+							( error, bytesRead, chunk ) => {
+								if ( null !== error ) {
+									reject();
+									return;
+								}
+
+								if ( bytesRead <= searchToken.byteLength ) {
+									resolve();
+									return;
+								}
+
+								const searchTokenAt = chunk.indexOf( searchToken );
+								if ( -1 === searchTokenAt ) {
+									return scanNextChunk( position + bytesRead - searchToken.byteLength );
+								}
+
+								if ( searchTokenAt + dataUriToken.byteLength + 1 > chunk.byteLength ) {
+									return scanNextChunk( searchTokenAt );
+								}
+
+								assert(
+									chunk.includes( dataUriToken ),
+									`The ${ filePath } file must not contain a sourceMappingURL.`
+								);
+								resolve();
+							}
+						);
+					};
+
+					scanNextChunk( 0 );
+				} );
+			} ) );
+		}
+
+		await Promise.all( sourceMapSearch );
+		done();
 	} );
 
 	grunt.registerTask( 'build', function() {
