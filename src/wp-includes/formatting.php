@@ -3318,10 +3318,14 @@ function wp_targeted_link_rel( $text ) {
 	}
 
 	$p = new WP_HTML_Tag_Processor( $text );
-	while ( $p->next_tag( 'a' ) && ! is_string( $p->get_attribute( 'target' ) ) ) {
+	while ( $p->next_tag( 'a' ) ) {
+		if ( ! is_string( $p->get_attribute( 'target' ) ) ) {
+			continue;
+		}
+
 		$href      = $p->get_attribute( 'href' );
 		$rel       = $p->get_attribute( 'rel' );
-		$rel       = true === $rel ? "" : $rel;
+		$rel       = is_string( $rel ) ? $rel : '';
 		$link_text = sprintf( 'href="%s" rel="%s"', esc_attr( $href ), esc_attr( $rel ) );
 
 		/**
