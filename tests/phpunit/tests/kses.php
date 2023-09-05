@@ -17,7 +17,7 @@ class Tests_Kses extends WP_UnitTestCase {
 	public function test_wp_filter_post_kses_address( $content, $expected ) {
 		global $allowedposttags;
 
-		$this->assertSame( $expected, wp_kses( $content, $allowedposttags ) );
+		$this->assertEqualMarkup( $expected, wp_kses( $content, $allowedposttags ) );
 	}
 
 	/**
