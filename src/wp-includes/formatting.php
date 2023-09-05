@@ -3318,18 +3318,17 @@ function wp_targeted_link_rel( $text ) {
 	}
 
 	$p = new WP_HTML_Tag_Processor( $text );
-	while ( $p->next_tag( 'a' ) ) {
-		$target = $p->get_attribute( 'target' );
-		if ( null === $target ) {
-			continue;
-		}
-
-		$rel = $p->get_attribute( 'rel' );
-		$rel = true === $rel ? "" : $rel;
-		$link_text = "rel=\"{$rel}\"";
+	while ( $p->next_tag( 'a' ) && ! is_string( $p->get_attribute( 'target' ) ) ) {
+		$href      = $p->get_attribute( 'href' );
+		$rel       = $p->get_attribute( 'rel' );
+		$rel       = true === $rel ? "" : $rel;
+		$link_text = sprintf( 'href="%s" rel="%s"', esc_attr( $href ), esc_attr( $rel ) );
 
 		/**
 		 * Filters the rel values that are added to links with `target` attribute.
+		 *
+		 * @TODO: Some plugins scan the link text, though they mostly scan for URL patterns.
+		 *        We need to provide the existing tag HTML or find a way to update filters.
 		 *
 		 * @since 5.1.0
 		 *
@@ -3341,9 +3340,8 @@ function wp_targeted_link_rel( $text ) {
 			continue;
 		}
 
-		$all_parts = preg_split( '/\s/', "$rel $updated_rel", -1, PREG_SPLIT_NO_EMPTY );
-		$new_rel   = implode( ' ', array_unique( $all_parts ) );
-		$p->set_attribute( 'rel', $new_rel );
+		$all_rel_parts = preg_split( '/\s/', "$rel $updated_rel", -1, PREG_SPLIT_NO_EMPTY );
+		$p->set_attribute( 'rel', implode( ' ', array_unique( $all_rel_parts ) ) );
 	}
 
 	return $p->get_updated_html();
