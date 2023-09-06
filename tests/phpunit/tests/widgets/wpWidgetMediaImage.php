@@ -449,12 +449,23 @@ class Tests_Widgets_wpWidgetMediaImage extends WP_UnitTestCase {
 		);
 		$output = ob_get_clean();
 
+		$p = new WP_HTML_Tag_Processor( $output );
+
 		// No default title.
-		$this->assertStringNotContainsString( 'title="', $output );
+		$this->assertTrue( $p->next_tag( 'a' ), 'Failed to find wrapping A tag.' );
+		$this->assertNull( $p->get_attribute( 'title' ), "Should not have returned title but found: {$p->get_attribute( 'title' )}." );
+
 		// Default image classes.
-		$this->assertStringContainsString( 'class="image wp-image-' . $attachment_id, $output );
-		$this->assertStringContainsString( 'style="max-width: 100%; height: auto;"', $output );
-		$this->assertStringContainsString( 'alt=""', $output );
+		$this->assertTrue( $p->next_tag( 'img' ), 'Failed to find IMG tag.' );
+		$expected_classes = array( 'image', "wp-image-{$attachment_id}" );
+		$this->assertSame(
+			$expected_classes,
+			array_intersect( $expected_classes, preg_split( '~[ \t\f\r\n]~', $p->get_attribute( 'class' ), -1, PREG_SPLIT_NO_EMPTY ) ),
+			"Expected 'image' and 'wp-image-{$attachment_id}' classes but instead found: {$p->get_attribute( 'class' )}"
+		);
+
+		$this->assertEquals( 'max-width: 100%; height: auto;', $p->get_attribute( 'style' ), "Found unexpected style values." );
+		$this->assertEquals( '', $p->get_attribute( 'alt' ), 'Expected to find empty alt attribute.' );
 
 		ob_start();
 		$widget->render_media(
@@ -470,13 +481,24 @@ class Tests_Widgets_wpWidgetMediaImage extends WP_UnitTestCase {
 		);
 		$output = ob_get_clean();
 
+		$p = new WP_HTML_Tag_Processor( $output );
+
 		// Custom image title.
-		$this->assertStringContainsString( 'title="Custom Title"', $output );
+		$this->assertTrue( $p->next_tag( 'a' ), 'Failed to find wrapping A tag.' );
+		$this->assertEquals( 'Custom Title', $p->get_attribute( 'title' ), 'Did not return proper title attribute.' );
+
 		// Custom image class.
-		$this->assertStringContainsString( 'class="image wp-image-' . $attachment_id . ' custom-class', $output );
-		$this->assertStringContainsString( 'alt="A flower"', $output );
-		$this->assertStringContainsString( 'width="100"', $output );
-		$this->assertStringContainsString( 'height="100"', $output );
+		$this->assertTrue( $p->next_tag( 'img' ), 'Failed to find IMG tag.' );
+		$expected_classes = array( 'image', "wp-image-{$attachment_id}", 'custom-class' );
+		$this->assertSame(
+			$expected_classes,
+			array_intersect( $expected_classes, preg_split( '~[ \t\f\r\n]~', $p->get_attribute( 'class' ), -1, PREG_SPLIT_NO_EMPTY ) ),
+			"Expected 'image', 'wp-image-{$attachment_id}', and 'custom-class' classes but instead found: {$p->get_attribute( 'class' )}"
+		);
+
+		$this->assertEquals( '100', $p->get_attribute( 'height' ), 'Returned wrong height attribute value.' );
+		$this->assertEquals( '100', $p->get_attribute( 'width' ), 'Returned wrong width attribute value.' );
+		$this->assertEquals( 'A flower', $p->get_attribute( 'alt' ), 'Returned wrong alt attribute value.' );
 
 		// Embeded images.
 		ob_start();
@@ -492,10 +514,13 @@ class Tests_Widgets_wpWidgetMediaImage extends WP_UnitTestCase {
 		);
 		$output = ob_get_clean();
 
+		$p = new WP_HTML_Tag_Processor( $output );
+
 		// Custom image class.
-		$this->assertStringContainsString( 'src="http://example.org/url/to/image.jpg"', $output );
-		$this->assertStringContainsString( 'decoding="async"', $output );
-		$this->assertStringContainsString( 'loading="lazy"', $output );
+		$this->assertTrue( $p->next_tag( 'img' ), 'Failed to find IMG tag.' );
+		$this->assertEquals( 'http://example.org/url/to/image.jpg', $p->get_attribute( 'src' ), 'Returned wrong src attribute value.' );
+		$this->assertEquals( 'async', $p->get_attribute( 'decoding' ), 'Returned wrong decoding attribute value.' );
+		$this->assertEquals( 'lazy', $p->get_attribute( 'loading' ), 'Returned wrong loading attribute value.' );
 
 		// Link settings.
 		ob_start();
@@ -507,12 +532,13 @@ class Tests_Widgets_wpWidgetMediaImage extends WP_UnitTestCase {
 		);
 		$output = ob_get_clean();
 
-		$link = '<a href="' . wp_get_attachment_url( $attachment_id ) . '"';
-		$this->assertStringContainsString( $link, $output );
-		$this->assertTrue( (bool) preg_match( '#<a href.*?>#', $output, $matches ) );
-		$this->assertStringNotContainsString( ' class="', $matches[0] );
-		$this->assertStringNotContainsString( ' rel="', $matches[0] );
-		$this->assertStringNotContainsString( ' target="', $matches[0] );
+		$p = new WP_HTML_Tag_Processor( $output );
+
+		$this->assertTrue( $p->next_tag( 'a' ), 'Failed to find A tag.' );
+		$this->assertEquals( wp_get_attachment_url( $attachment_id ), $p->get_attribute( 'href' ), 'Returned wrong href attribute value.' );
+		$this->assertNull( $p->get_attribute( 'class' ), "Should not have found class attribute but instead found: {$p->get_attribute( 'class' )}." );
+		$this->assertNull( $p->get_attribute( 'rel' ), "Should not have found rel attribute but instead found: {$p->get_attribute( 'rel' )}." );
+		$this->assertNull( $p->get_attribute( 'target' ), "Should not have found target attribute but instead found: {$p->get_attribute( 'target' )}." );
 
 		ob_start();
 		$widget->render_media(
@@ -526,10 +552,13 @@ class Tests_Widgets_wpWidgetMediaImage extends WP_UnitTestCase {
 		);
 		$output = ob_get_clean();
 
-		$this->assertStringContainsString( '<a href="' . get_attachment_link( $attachment_id ) . '"', $output );
-		$this->assertStringContainsString( 'class="custom-link-class"', $output );
-		$this->assertStringContainsString( 'rel="attachment"', $output );
-		$this->assertStringNotContainsString( 'target=""', $output );
+		$p = new WP_HTML_Tag_Processor( $output );
+
+		$this->assertTrue( $p->next_tag( 'a' ), 'Failed to find A tag.' );
+		$this->assertEquals( wp_get_attachment_link( $attachment_id ), $p->get_attribute( 'href' ), 'Returned wrong href attribute value.' );
+		$this->assertEquals( 'custom-link-class', $p->get_attribute( 'class' ), 'Returned wrong class attribute value.' );
+		$this->assertEquals( 'attachment', $p->get_attribute( 'rel' ), 'Returned wrong rel attribute value.' );
+		$this->assertNull( $p->get_attribute( 'target' ), "Should not have found target attribute but instead found: {$p->get_attribute( 'target' )}." );
 
 		ob_start();
 		$widget->render_media(
@@ -542,9 +571,12 @@ class Tests_Widgets_wpWidgetMediaImage extends WP_UnitTestCase {
 		);
 		$output = ob_get_clean();
 
-		$this->assertStringContainsString( '<a href="https://example.org"', $output );
-		$this->assertStringContainsString( 'target="_blank"', $output );
-		$this->assertStringContainsString( 'rel="noopener"', $output );
+		$p = new WP_HTML_Tag_Processor( $output );
+
+		$this->assertTrue( $p->next_tag( 'a' ), 'Failed to find A tag.' );
+		$this->assertEquals( 'https://example.org', $p->get_attribute( 'href' ), 'Returned wrong href attribute value.' );
+		$this->assertEquals( 'noopener', $p->get_attribute( 'rel' ), 'Returned wrong rel attribute value.' );
+		$this->assertEquals( '_blank', $p->get_attribute( 'target' ), 'Returned wrong target attribute value.' );
 
 		// Populate caption in attachment.
 		wp_update_post(
@@ -562,6 +594,7 @@ class Tests_Widgets_wpWidgetMediaImage extends WP_UnitTestCase {
 			)
 		);
 		$output = ob_get_clean();
+		// @TODO: Update this test once $p->has_class() is available.
 		$this->assertStringNotContainsString( 'wp-caption', $output );
 		$this->assertStringNotContainsString( '<p class="wp-caption-text">', $output );
 
@@ -574,6 +607,7 @@ class Tests_Widgets_wpWidgetMediaImage extends WP_UnitTestCase {
 			)
 		);
 		$output = ob_get_clean();
+		// @TODO: Update this test once $p->has_class() is available.
 		$this->assertStringContainsString( 'class="wp-caption alignnone"', $output );
 		$this->assertStringContainsString( '<p class="wp-caption-text">Default caption</p>', $output );
 
@@ -586,6 +620,7 @@ class Tests_Widgets_wpWidgetMediaImage extends WP_UnitTestCase {
 			)
 		);
 		$output = ob_get_clean();
+		// @TODO: Update this test once $p->has_class() is available.
 		$this->assertStringContainsString( 'class="wp-caption alignnone"', $output );
 		$this->assertStringContainsString( '<p class="wp-caption-text">Custom caption</p>', $output );
 
@@ -601,6 +636,7 @@ class Tests_Widgets_wpWidgetMediaImage extends WP_UnitTestCase {
 			)
 		);
 		$output = ob_get_clean();
+		// @TODO: Update this test once $p->has_class() is available.
 		$this->assertStringContainsString( 'style="width: 310px"', $output );
 		$this->assertStringContainsString( '<p class="wp-caption-text">Caption for an image with custom size</p>', $output );
 	}

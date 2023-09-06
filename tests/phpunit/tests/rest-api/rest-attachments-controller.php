@@ -1211,11 +1211,11 @@ class WP_Test_REST_Attachments_Controller extends WP_Test_REST_Post_Type_Control
 		}
 
 		// Compare expected API output to actual API output.
-		$this->assertSame( $expected_output['title']['raw'], $actual_output['title']['raw'] );
+		$this->assertEqualMarkup( $expected_output['title']['raw'], $actual_output['title']['raw'] );
 		$this->assertSame( $expected_output['title']['rendered'], trim( $actual_output['title']['rendered'] ) );
-		$this->assertSame( $expected_output['description']['raw'], $actual_output['description']['raw'] );
+		$this->assertEqualMarkup( $expected_output['description']['raw'], $actual_output['description']['raw'] );
 		$this->assertSame( $expected_output['description']['rendered'], trim( $actual_output['description']['rendered'] ) );
-		$this->assertSame( $expected_output['caption']['raw'], $actual_output['caption']['raw'] );
+		$this->assertEqualMarkup( $expected_output['caption']['raw'], $actual_output['caption']['raw'] );
 		$this->assertSame( $expected_output['caption']['rendered'], trim( $actual_output['caption']['rendered'] ) );
 
 		// Compare expected API output to WP internal values.

@@ -23,7 +23,7 @@ class Tests_Formatting_wpTargetedLinkRel extends WP_UnitTestCase {
 	public function test_target_as_first_attribute() {
 		$content  = '<p>Links: <a target="_blank" href="#">No rel</a></p>';
 		$expected = '<p>Links: <a target="_blank" href="#" rel="noopener">No rel</a></p>';
-		$this->assertSame( $expected, wp_targeted_link_rel( $content ) );
+		$this->assertEqualMarkup( $expected, wp_targeted_link_rel( $content ) );
 	}
 
 	public function test_add_to_existing_rel() {
