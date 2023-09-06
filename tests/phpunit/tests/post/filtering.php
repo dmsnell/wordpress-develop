@@ -70,7 +70,7 @@ EOF;
 		$id   = self::factory()->post->create( array( 'post_content' => $content ) );
 		$post = get_post( $id );
 
-		$this->assertSame( $expected, $post->post_content );
+		$this->assertEqualMarkup( $expected, $post->post_content );
 	}
 
 	/**
@@ -90,7 +90,7 @@ EOF;
 		$id   = self::factory()->post->create( array( 'post_content' => $content ) );
 		$post = get_post( $id );
 
-		$this->assertSame( $expected, $post->post_content );
+		$this->assertEqualMarkup( $expected, $post->post_content );
 	}
 
 	// Make sure unbalanced tags are untouched when the balance option is off.
