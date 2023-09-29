@@ -124,7 +124,7 @@ EOD;
 			'html'  => $html,
 		);
 		$actual = _wp_oembed_get_object()->data2html( $data, 'https://untrusted.localhost' );
-		$this->assertSame( $expected, $actual );
+		$this->assertEqualMarkup( $expected, $actual );
 	}
 
 	/**

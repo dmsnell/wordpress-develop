@@ -594,7 +594,7 @@ class WP_HTML_Tag_Processor {
 					$this->bytes_already_parsed = strlen( $this->html );
 					return false;
 				} elseif (
-					( 'TEXTAREA' === $tag_name || 'TITLE' === $tag_name ) &&
+					( 'TEXTAREA' === $tag_name || 'TITLE' === $tag_name || 'STYLE' === $tag_name ) &&
 					! $this->skip_rcdata( $tag_name )
 				) {
 					$this->bytes_already_parsed = strlen( $this->html );

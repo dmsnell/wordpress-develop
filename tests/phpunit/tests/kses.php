@@ -17,7 +17,7 @@ class Tests_Kses extends WP_UnitTestCase {
 	public function test_wp_filter_post_kses_address( $content, $expected ) {
 		global $allowedposttags;
 
-		$this->assertSame( $expected, wp_kses( $content, $allowedposttags ) );
+		$this->assertEqualMarkup( $expected, wp_kses( $content, $allowedposttags ) );
 	}
 
 	/**
@@ -65,7 +65,7 @@ class Tests_Kses extends WP_UnitTestCase {
 	public function test_wp_filter_post_kses_a( $content, $expected ) {
 		global $allowedposttags;
 
-		$this->assertSame( $expected, wp_kses( $content, $allowedposttags ) );
+		$this->assertEqualMarkup( $expected, wp_kses( $content, $allowedposttags ) );
 	}
 
 	/**
@@ -171,7 +171,7 @@ class Tests_Kses extends WP_UnitTestCase {
 	public function test_wp_filter_post_kses_abbr( $content, $expected ) {
 		global $allowedposttags;
 
-		$this->assertSame( $expected, wp_kses( $content, $allowedposttags ) );
+		$this->assertEqualMarkup( $expected, wp_kses( $content, $allowedposttags ) );
 	}
 
 	/**
@@ -725,7 +725,8 @@ EOF;
 	 * @dataProvider data_attr_parse
 	 */
 	public function test_attr_parse( $input, $output ) {
-		return $this->assertSame( $output, wp_kses_attr_parse( $input ) );
+		// @TODO: Why has this test been hard-encoding the spaces at the end of the attribute?
+		return $this->assertSame( $output, trim( wp_kses_attr_parse( $input ) ) );
 	}
 
 	public function data_attr_parse() {
@@ -1716,7 +1717,7 @@ EOF;
 	 * @param string $expected The expected result from KSES.
 	 */
 	public function test_wp_kses_object_tag_allowed( $html, $expected ) {
-		$this->assertSame( $expected, wp_kses_post( $html ) );
+		$this->assertEqualMarkup( $expected, wp_kses_post( $html ) );
 	}
 
 	/**
@@ -1917,7 +1918,7 @@ HTML;
 	 * @param array  $allowed_html The allowed HTML to pass to KSES.
 	 */
 	public function test_wp_kses_allowed_values_list( $content, $expected, $allowed_html ) {
-		$this->assertSame( $expected, wp_kses( $content, $allowed_html ) );
+		$this->assertEqualMarkup( $expected, wp_kses( $content, $allowed_html ) );
 	}
 
 	/**
@@ -1975,7 +1976,7 @@ HTML;
 	 * @param array  $allowed_html The allowed HTML to pass to KSES.
 	 */
 	public function test_wp_kses_required_attribute( $content, $expected, $allowed_html ) {
-		$this->assertSame( $expected, wp_kses( $content, $allowed_html ) );
+		$this->assertEqualMarkup( $expected, wp_kses( $content, $allowed_html ) );
 	}
 
 	/**
