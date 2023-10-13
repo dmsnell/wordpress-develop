@@ -66,16 +66,3 @@ function render_block_core_comment_content( $attributes, $content, $block ) {
 		$comment_text
 	);
 }
-
-/**
- * Registers the `core/comment-content` block on the server.
- */
-function register_block_core_comment_content() {
-	register_block_type_from_metadata(
-		__DIR__ . '/comment-content',
-		array(
-			'render_callback' => 'render_block_core_comment_content',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_comment_content' );

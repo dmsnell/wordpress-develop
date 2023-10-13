@@ -36,17 +36,3 @@ function block_core_heading_render( $attributes, $content ) {
 
 	return $p->get_updated_html();
 }
-
-/**
- * Registers the `core/heading` block on server.
- */
-function register_block_core_heading() {
-	register_block_type_from_metadata(
-		__DIR__ . '/heading',
-		array(
-			'render_callback' => 'block_core_heading_render',
-		)
-	);
-}
-
-add_action( 'init', 'register_block_core_heading' );

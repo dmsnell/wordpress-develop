@@ -67,17 +67,3 @@ function render_block_core_comment_reply_link( $attributes, $content, $block ) {
 		$comment_reply_link
 	);
 }
-
-/**
- * Registers the `core/comment-reply-link` block on the server.
- */
-function register_block_core_comment_reply_link() {
-	register_block_type_from_metadata(
-		__DIR__ . '/comment-reply-link',
-		array(
-			'render_callback' => 'render_block_core_comment_reply_link',
-		)
-	);
-}
-
-add_action( 'init', 'register_block_core_comment_reply_link' );

@@ -103,16 +103,3 @@ function render_block_core_archives( $attributes ) {
 		$archives
 	);
 }
-
-/**
- * Register archives block.
- */
-function register_block_core_archives() {
-	register_block_type_from_metadata(
-		__DIR__ . '/archives',
-		array(
-			'render_callback' => 'render_block_core_archives',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_archives' );

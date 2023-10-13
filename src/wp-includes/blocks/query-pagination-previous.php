@@ -69,16 +69,3 @@ function render_block_core_query_pagination_previous( $attributes, $content, $bl
 
 	return $content;
 }
-
-/**
- * Registers the `core/query-pagination-previous` block on the server.
- */
-function register_block_core_query_pagination_previous() {
-	register_block_type_from_metadata(
-		__DIR__ . '/query-pagination-previous',
-		array(
-			'render_callback' => 'render_block_core_query_pagination_previous',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_query_pagination_previous' );

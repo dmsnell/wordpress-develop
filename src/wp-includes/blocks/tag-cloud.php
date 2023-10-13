@@ -39,16 +39,3 @@ function render_block_core_tag_cloud( $attributes ) {
 		$tag_cloud
 	);
 }
-
-/**
- * Registers the `core/tag-cloud` block on server.
- */
-function register_block_core_tag_cloud() {
-	register_block_type_from_metadata(
-		__DIR__ . '/tag-cloud',
-		array(
-			'render_callback' => 'render_block_core_tag_cloud',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_tag_cloud' );

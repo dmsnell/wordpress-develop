@@ -6,18 +6,6 @@
  */
 
 /**
- *  Registers the `core/pattern` block on the server.
- */
-function register_block_core_pattern() {
-	register_block_type_from_metadata(
-		__DIR__ . '/pattern',
-		array(
-			'render_callback' => 'render_block_core_pattern',
-		)
-	);
-}
-
-/**
  * Renders the `core/pattern` block on the server.
  *
  * @since 6.3.0 Backwards compatibility: blocks with no `syncStatus` attribute do not receive block wrapper.
@@ -50,5 +38,3 @@ function render_block_core_pattern( $attributes ) {
 
 	return do_blocks( $content );
 }
-
-add_action( 'init', 'register_block_core_pattern' );

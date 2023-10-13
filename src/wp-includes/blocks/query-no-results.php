@@ -44,16 +44,3 @@ function render_block_core_query_no_results( $attributes, $content, $block ) {
 		$content
 	);
 }
-
-/**
- * Registers the `core/query-no-results` block on the server.
- */
-function register_block_core_query_no_results() {
-	register_block_type_from_metadata(
-		__DIR__ . '/query-no-results',
-		array(
-			'render_callback' => 'render_block_core_query_no_results',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_query_no_results' );

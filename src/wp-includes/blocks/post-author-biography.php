@@ -33,16 +33,3 @@ function render_block_core_post_author_biography( $attributes, $content, $block 
 
 	return sprintf( '<div %1$s>', $wrapper_attributes ) . $author_biography . '</div>';
 }
-
-/**
- * Registers the `core/post-author-biography` block on the server.
- */
-function register_block_core_post_author_biography() {
-	register_block_type_from_metadata(
-		__DIR__ . '/post-author-biography',
-		array(
-			'render_callback' => 'render_block_core_post_author_biography',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_post_author_biography' );

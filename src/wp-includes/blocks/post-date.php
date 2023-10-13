@@ -57,16 +57,3 @@ function render_block_core_post_date( $attributes, $content, $block ) {
 		$formatted_date
 	);
 }
-
-/**
- * Registers the `core/post-date` block on the server.
- */
-function register_block_core_post_date() {
-	register_block_type_from_metadata(
-		__DIR__ . '/post-date',
-		array(
-			'render_callback' => 'render_block_core_post_date',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_post_date' );

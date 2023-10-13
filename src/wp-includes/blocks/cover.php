@@ -63,16 +63,3 @@ function render_block_core_cover( $attributes, $content ) {
 
 	return $content;
 }
-
-/**
- * Registers the `core/cover` block renderer on server.
- */
-function register_block_core_cover() {
-	register_block_type_from_metadata(
-		__DIR__ . '/cover',
-		array(
-			'render_callback' => 'render_block_core_cover',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_cover' );

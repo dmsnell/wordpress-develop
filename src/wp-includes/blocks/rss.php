@@ -104,16 +104,3 @@ function render_block_core_rss( $attributes ) {
 
 	return sprintf( '<ul %s>%s</ul>', $wrapper_attributes, $list_items );
 }
-
-/**
- * Registers the `core/rss` block on server.
- */
-function register_block_core_rss() {
-	register_block_type_from_metadata(
-		__DIR__ . '/rss',
-		array(
-			'render_callback' => 'render_block_core_rss',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_rss' );

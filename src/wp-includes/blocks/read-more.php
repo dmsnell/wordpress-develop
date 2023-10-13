@@ -44,16 +44,3 @@ function render_block_core_read_more( $attributes, $content, $block ) {
 		$screen_reader_text
 	);
 }
-
-/**
- * Registers the `core/read-more` block on the server.
- */
-function register_block_core_read_more() {
-	register_block_type_from_metadata(
-		__DIR__ . '/read-more',
-		array(
-			'render_callback' => 'render_block_core_read_more',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_read_more' );

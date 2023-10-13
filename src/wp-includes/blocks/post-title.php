@@ -57,16 +57,3 @@ function render_block_core_post_title( $attributes, $content, $block ) {
 		$title
 	);
 }
-
-/**
- * Registers the `core/post-title` block on the server.
- */
-function register_block_core_post_title() {
-	register_block_type_from_metadata(
-		__DIR__ . '/post-title',
-		array(
-			'render_callback' => 'render_block_core_post_title',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_post_title' );

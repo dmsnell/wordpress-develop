@@ -36,16 +36,3 @@ function render_block_core_loginout( $attributes ) {
 
 	return '<div ' . $wrapper_attributes . '>' . $contents . '</div>';
 }
-
-/**
- * Registers the `core/loginout` block on server.
- */
-function register_block_core_loginout() {
-	register_block_type_from_metadata(
-		__DIR__ . '/loginout',
-		array(
-			'render_callback' => 'render_block_core_loginout',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_loginout' );

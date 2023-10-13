@@ -135,16 +135,3 @@ function get_block_core_avatar_border_attributes( $attributes ) {
 	}
 	return $attributes;
 }
-
-/**
- * Registers the `core/avatar` block on the server.
- */
-function register_block_core_avatar() {
-	register_block_type_from_metadata(
-		__DIR__ . '/avatar',
-		array(
-			'render_callback' => 'render_block_core_avatar',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_avatar' );

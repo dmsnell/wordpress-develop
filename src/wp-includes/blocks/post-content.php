@@ -60,16 +60,3 @@ function render_block_core_post_content( $attributes, $content, $block ) {
 		'</div>'
 	);
 }
-
-/**
- * Registers the `core/post-content` block on the server.
- */
-function register_block_core_post_content() {
-	register_block_type_from_metadata(
-		__DIR__ . '/post-content',
-		array(
-			'render_callback' => 'render_block_core_post_content',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_post_content' );

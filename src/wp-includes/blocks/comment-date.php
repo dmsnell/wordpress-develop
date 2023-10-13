@@ -43,16 +43,3 @@ function render_block_core_comment_date( $attributes, $content, $block ) {
 		$formatted_date
 	);
 }
-
-/**
- * Registers the `core/comment-date` block on the server.
- */
-function register_block_core_comment_date() {
-	register_block_type_from_metadata(
-		__DIR__ . '/comment-date',
-		array(
-			'render_callback' => 'render_block_core_comment_date',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_comment_date' );

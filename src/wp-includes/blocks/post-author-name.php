@@ -39,16 +39,3 @@ function render_block_core_post_author_name( $attributes, $content, $block ) {
 
 	return sprintf( '<div %1$s>%2$s</div>', $wrapper_attributes, $author_name );
 }
-
-/**
- * Registers the `core/post-author-name` block on the server.
- */
-function register_block_core_post_author_name() {
-	register_block_type_from_metadata(
-		__DIR__ . '/post-author-name',
-		array(
-			'render_callback' => 'render_block_core_post_author_name',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_post_author_name' );

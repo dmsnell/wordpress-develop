@@ -26,16 +26,3 @@ function render_block_core_site_tagline( $attributes ) {
 		$site_tagline
 	);
 }
-
-/**
- * Registers the `core/site-tagline` block on the server.
- */
-function register_block_core_site_tagline() {
-	register_block_type_from_metadata(
-		__DIR__ . '/site-tagline',
-		array(
-			'render_callback' => 'render_block_core_site_tagline',
-		)
-	);
-}
-add_action( 'init', 'register_block_core_site_tagline' );
