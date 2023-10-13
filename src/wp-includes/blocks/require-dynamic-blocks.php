@@ -15,7 +15,7 @@ add_action(
 			array( '/comment-reply-link', 'render_block_core_comment_reply_link' ),
 			array( '/cover', 'render_block_core_cover' ),
 			array( '/heading', 'block_core_heading_render' ),
-			array( '/loginlogout', 'render_block_core_loginout' ),
+			array( '/loginout', 'render_block_core_loginout' ),
 			array( '/post-author', 'render_block_core_post_author' ),
 			array( '/post-author-biography', 'render_block_core_post_author_biography' ),
 			array( '/post-author-name', 'render_block_core_post_author_name' ),
@@ -41,7 +41,7 @@ add_action(
 				__DIR__ . $path,
 				array(
 					'render_callback' => function ( $attributes, $content, $block ) use ( $path, $render ) {
-						require_once ABSPATH . WPINC . $path;
+						require_once ABSPATH . WPINC . '/blocks' . $path . '.php';
 						return call_user_func( $render, $attributes, $content, $block );
 					},
 				)
