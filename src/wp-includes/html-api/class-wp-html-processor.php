@@ -21,6 +21,7 @@
  * and useful for the following operations:
  *
  *  - Querying based on nested HTML structure.
+ *  - Reading and writing the raw HTML markup inside or around a tag.
  *
  * Eventually the HTML Processor will also support:
  *  - Wrapping a tag in surrounding HTML.
@@ -474,9 +475,348 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	}
 
 	/**
-	 * Steps through the HTML document and stop at the next tag, if any.
+	 * Returns the raw HTML markup inside a matched tag.
+	 *
+	 * "Markup" differs from inner HTML in that it returns the raw HTML inside the matched tag.
+	 * This means that it's possible this returns HTML without matching tags, or with HTML attributes
+	 * serialized differently than a DOM API would return, or with non-decoded character references.
+	 *
+	 * Note that when called on void or self-closing foreign elements this will always return an
+	 * empty string. This is to maintain correspondance with the DOM API.
+	 *
+	 * Example:
+	 *
+	 *     $processor = WP_HTML_Processor::createFragment( '<div><p>&rarr; Inside <em>P</em> <i>tags</div>' );
+	 *     $processor->next_tag( 'P' );
+	 *     $html = $procesor->get_raw_inner_markup();
+	 *     $html === '&rarr; Inside <em>P</em> <i>tags';
 	 *
 	 * @since 6.4.0
+	 *
+	 * @throws Exception When unable to allocate a bookmark for internal tracking of the open tag.
+	 *
+	 * @return string|null The raw inner markup if available, else NULL.
+	 */
+	public function get_raw_inner_markup() {
+		if ( null === $this->get_tag() ) {
+			return null;
+		}
+
+		$this->set_bookmark( 'opener' );
+		$found_tag = $this->step_until_tag_is_closed();
+		$this->set_bookmark( 'closer' );
+
+		if ( $found_tag ) {
+			$inner_markup = $this->substr_bookmarks( 'after', 'opener', 'before', 'closer' );
+		} else {
+			// If there's no closing tag then the inner markup continues to the end of the document.
+			$inner_markup = $this->substr_bookmark( 'after', 'opener' );
+		}
+
+		$this->seek( 'opener' );
+		$this->release_bookmark( 'opener' );
+		$this->release_bookmark( 'closer' );
+
+		return $inner_markup;
+	}
+
+	/**
+	 * Returns the raw HTML markup around a matched tag, including the tag itself.
+	 *
+	 * "Markup" differs from outer HTML in that it returns the raw HTML around the matched tag.
+	 * This means that it's possible this returns HTML without matching tags, or with HTML attributes
+	 * serialized differently than a DOM API would return, or with non-decoded character references.
+	 *
+	 * Example:
+	 *
+	 *     $processor = WP_HTML_Processor::createFragment( '<div><p>&rarr; Inside <em>P</em> <i>tags</div>' );
+	 *     $processor->next_tag( 'P' );
+	 *     $html = $processor->get_raw_outer_markup();
+	 *     $html === '<p>&rarr; Inside <em>P</em> <i>tags';
+	 *
+	 * @throws Exception When unable to allocate a bookmark for internal tracking of the open tag.
+	 *
+	 * @since 6.4.0
+	 *
+	 * @return string|null The raw outer markup if available, else NULL.
+	 */
+	public function get_raw_outer_markup() {
+		if ( null === $this->get_tag() ) {
+			return null;
+		}
+
+		$this->set_bookmark( 'opener' );
+		$start_tag = $this->current_token->node_name;
+		$found_tag = $this->step_until_tag_is_closed();
+		$this->set_bookmark( 'closer' );
+
+		if ( $found_tag ) {
+			$did_close    = $this->get_tag() === $start_tag && $this->is_tag_closer();
+			$end_position = $did_close ? 'after' : 'before';
+			$outer_markup = $this->substr_bookmarks( 'before', 'opener', $end_position, 'closer' );
+		} else {
+			// If there's no closing tag then the outer markup continues to the end of the document.
+			$outer_markup = $this->substr_bookmark( 'before', 'opener' );
+		}
+
+		$this->seek( 'opener' );
+		$this->release_bookmark( 'opener' );
+		$this->release_bookmark( 'closer' );
+
+		return $outer_markup;
+	}
+
+	/**
+	 * Replaces the raw HTML of the currently-matched tag's inner markup with new HTML.
+	 * This replaces the content between the tag opener and tag closer.
+	 *
+	 * Example:
+	 *
+	 *     // Set inner text.
+	 *     $processor = WP_HTML_Processor::createFragment( '<p><span>Carrots</span> are <em></em>.</p>' );
+	 *     if ( $processor->next_tag( 'EM' ) ) {
+	 *         $processor->set_raw_inner_markup( 'orange' );
+	 *     }
+	 *     $html = $processor->get_updated_html();
+	 *     $html === '<p><span>Carrots</span> are <em>orange</em>.</p>';
+	 *
+	 *     // Set inner content with a tag.
+	 *     $processor = WP_HTML_Processor::createFragment( '<p><span>Carrots</span> are <em></em>.</p>' );
+	 *     if ( $processor->next_tag( 'EM' ) ) {
+	 *         $processor->set_raw_inner_markup( '<img src="orange-color.png" alt="orange colored">' );
+	 *     }
+	 *     $html = $processor->get_updated_html();
+	 *     $html === '<p><span>Carrots</span> are <em><img src="orange-color.png" alt="orange colored"></em>.</p>';
+	 *
+	 * <strong>Warning!</strong> Calling this function directly can lead to malformed HTML output!
+	 * This function operates on raw HTML and performs no escaping or semantic verification. This
+	 * is left to the caller to ensure that any update doesn't break or change the rest of the HTML.
+	 *
+	 * One could imagine including a closing tag for the element whose raw inner markup is being set
+	 * and this closing tag would close the open element and abandon what was previously its children.
+	 *
+	 * Example:
+	 *
+	 *      // Warning! This would close the first DIV and create a new one.
+	 *      $processor = WP_HTML_Processor::createFragment( '<div>One <span>giant</span> squirrel.</div>' );
+	 *      if ( $processor->next_tag( 'SPAN' ) ) {
+	 *          $processor->set_raw_inner_markup( '</div> hehehe' );
+	 *      }
+	 *      $html = $processor->get_updated_html();
+	 *      $html === '<div>One <span></div> hehehe</span> squirrel.</div>';
+	 *
+	 * It's obvious here that the closing DIV tag will end the first DIV element. The
+	 * rest of the markup looks like plain text and some unexpected closing tags. This
+	 * HTML represents the DOM on the right in the following diagram. The "squirrel"
+	 * text segment was a child of the DIV before the change but has become a sibling
+	 * after setting the raw inner markup.
+	 *
+	 *     This is not produced.                   This is produced in the browser.
+	 *        BODY                                    BODY
+	 *          └─ DIV                                  ├─ DIV
+	 *             ├─ #text "One "                      │  └─ #text "One "
+	 *             ├─ SPAN                              │     └─ SPAN (empty)
+	 *             │  └─ #text " hehehe"                └─ #text " hehehe squirrel."
+	 *             └─ #text " squirrel."
+	 *
+	 * This applies beyond basic markup errors because of the way the semantic rules of HTML
+	 * apply to specific elements.
+	 *
+	 * Example:
+	 *
+	 *     // Warning! This would close the first paragraph and create a new one.
+	 *     $processor = WP_HTML_Processor::createFragment( '<p><span>Carrots</span> are <em></em>.</p>' );
+	 *     if ( $processor->next_tag( 'EM' ) ) {
+	 *         $processor->set_raw_inner_markup( '<p>healthy snacks</p>' );
+	 *     }
+	 *     $html = $processor->get_updated_html();
+	 *     $html === '<p><span>Carrots</span> are <em><p>healthy snacks</p></em>.</p>';
+	 *
+	 * It may look like the P element is inside the EM element, producing a DOM structure as on
+	 * the left of the following diagram, but it will in fact produce the one on the right. This
+	 * means that updating raw inner markup can "bleed" into the outer elements in the HTML
+	 * document and traversing the tags after setting raw inner markup may be different from
+	 * how it was before making the change.
+	 *
+	 *     This is not produced.                   This is produced in the browser.
+	 *       BODY                                    BODY
+	 *         └─ P                                    ├─ P
+	 *            ├─ SPAN                              │  ├─ SPAN
+	 *            │  └─ #text "Carrots"                │  │  └─ #text "Carrots"
+	 *            ├─ #text " are "                     │  ├─ #text " are "
+	 *            ├─ EM                                │  └─ EM (empty)
+	 *            │  └─ P                              ├─ P
+	 *            │     └─ #text "healthy snacks"      │  └─ EM
+	 *            └─ #text "."                         │     └─ #text "healthy snacks"
+	 *                                                 └─ #text "."
+     *
+	 * @throws Exception When unable to set bookmark for internal tracking.
+	 *
+	 * @since 6.4.0
+	 *
+	 * @param string $raw_markup Already-escaped and verified HTML to set inside the currently-open tag.
+	 * @return bool|null Whether the contents were updated.
+	 */
+	public function set_raw_inner_markup( $raw_markup ) {
+		if ( null === $this->get_tag() ) {
+			return null;
+		}
+
+		$this->set_bookmark( 'opener' );
+		$start_tag = $this->current_token->node_name;
+
+		if ( self::is_void( $start_tag ) ) {
+			$this->release_bookmark( 'opener' );
+			return true;
+		}
+
+		$found_tag = $this->step_until_tag_is_closed();
+		$this->set_bookmark( 'closer' );
+
+		if ( $found_tag ) {
+			$this->replace_using_bookmarks( $raw_markup, 'after', 'opener', 'before', 'closer' );
+		} else {
+			// If there's no closing tag then the inner markup continues to the end of the document.
+			$this->replace_using_bookmark( $raw_markup, 'after', 'opener' );
+		}
+
+		$this->seek( 'opener' );
+		$this->release_bookmark( 'opener' );
+		$this->release_bookmark( 'closer' );
+		return true;
+	}
+
+	/**
+	 * Replaces the raw HTML of the currently-matched tag with new HTML.
+	 * This replaces the entire contents of the tag including the tag itself.
+	 *
+	 * Example:
+	 *
+	 *
+	 *     // Replace tag and all its children with text.
+	 *     $processor = WP_HTML_Processor::createFragment( '<p><span>Carrots</span> are <em>good for the <strong>eyes</strong></em>.</p>' );
+	 *     if ( $processor->next_tag( 'EM' ) ) {
+	 *         $processor->set_raw_outer_markup( 'orange' );
+	 *     }
+	 *     $html = $processor->get_updated_html();
+	 *     $html === '<p><span>Carrots</span> are orange.</p>';
+	 *
+	 *     // Set outer content with a tag.
+	 *     $processor = WP_HTML_Processor::createFragment( '<p><span>Carrots</span> are <em></em>.</p>' );
+	 *     if ( $processor->next_tag( 'EM' ) ) {
+	 *         $processor->set_raw_outer_markup( '<img src="orange-color.png" alt="orange colored">' );
+	 *     }
+	 *     $html = $processor->get_updated_html();
+	 *     $html === '<p><span>Carrots</span> are <img src="orange-color.png" alt="orange colored">.</p>';
+	 *
+	 * <strong>Warning!</strong> Calling this function directly can lead to malformed HTML output!
+	 * This function operates on raw HTML and performs no escaping or semantic verification. This
+	 * is left to the caller to ensure that any update doesn't break or change the rest of the HTML.
+	 *
+	 * One could imagine including a closing tag that closes the parent tag for the element whose
+	 * raw outer markup is being set and this closing tag would close the open parent element and
+	 * abandon what was previously its children.
+	 *
+	 * Example:
+	 *
+	 *      // Warning! This would close the first DIV and create a new one.
+	 *      $processor = WP_HTML_Processor::createFragment( '<div>One <span>giant</span> squirrel.</div>' );
+	 *      if ( $processor->next_tag( 'SPAN' ) ) {
+	 *          $processor->set_raw_outer_markup( '</div> hehehe' );
+	 *      }
+	 *      $html = $processor->get_updated_html();
+	 *      $html === '<div>One </div> hehehe squirrel.</div>';
+	 *
+	 * It's obvious here that the closing DIV tag will end the first DIV element. The
+	 * rest of the markup looks like plain text and an unexpected closing DIV tag. This
+	 * HTML represents the DOM on the right in the following diagram. The "squirrel"
+	 * text segment was a child of the DIV before the change but has become a sibling
+	 * after setting the raw outer markup.
+	 *
+	 *     This is not produced.                   This is produced in the browser.
+	 *        BODY                                    BODY
+	 *          └─ DIV                                  ├─ DIV
+	 *             └─ #text "One hehehe squirrel."      │  └─ #text "One "
+	 *                                                  └─ #text " hehehe squirrel."
+	 *
+	 * This applies beyond basic markup errors because of the way the semantic rules of HTML
+	 * apply to specific elements.
+	 *
+	 * Example:
+	 *
+	 *     // Warning! This would close the first paragraph and create a new one.
+	 *     $processor = WP_HTML_Processor::createFragment( '<p><span>Carrots</span> are <em></em>.</p>' );
+	 *     if ( $processor->next_tag( 'EM' ) ) {
+	 *         $processor->set_raw_outer_markup( '<p>healthy snacks</p>' );
+	 *     }
+	 *     $html = $processor->get_updated_html();
+	 *     $html === '<p><span>Carrots</span> are <p>healthy snacks</p>.</p>';
+	 *
+	 * It may look like the P element is inside the first P element, producing a DOM structure as
+	 * on the left of the following diagram, but it will in fact produce the one on the right.
+	 * This means that updating raw outer markup can "bleed" into the outer elements in the HTML
+	 * document and traversing the tags after setting raw outer markup may be different from how
+	 * it was before making the change.
+	 *
+	 *     This is not produced.                   This is produced in the browser.
+	 *       BODY                                    BODY
+	 *         └─ P                                    ├─ P
+	 *            ├─ SPAN                              │  ├─ SPAN
+	 *            │  └─ #text "Carrots"                │  │  └─ #text "Carrots"
+	 *            ├─ #text " are "                     │  └─ #text " are "
+	 *            ├─ P                                 ├─ P
+	 *            │  └─ #text "healthy snacks"         │  └─ #text "healthy snacks"
+	 *            └─ #text "."                         └─ #text "."
+	 *
+	 * @throws Exception When unable to set bookmark for internal tracking.
+	 *
+	 * @since 6.4.0
+	 *
+	 * @param string $raw_markup Already-escaped and verified HTML to set around the currently-open tag.
+	 * @return bool|null Whether the contents were updated.
+	 */
+	public function set_raw_outer_markup( $raw_markup ) {
+		if ( null === $this->get_tag() ) {
+			return null;
+		}
+
+		$this->set_bookmark( 'opener' );
+		$start_tag = $this->current_token->node_name;
+
+		if ( self::is_void( $start_tag ) ) {
+			$this->replace_using_bookmarks( $raw_markup, 'before', 'opener', 'after', 'opener' );
+			$this->release_bookmark( 'opener' );
+			return true;
+		}
+
+		$found_tag = $this->step_until_tag_is_closed();
+		$this->set_bookmark( 'closer' );
+
+		if ( $found_tag ) {
+			$did_close    = $this->get_tag() === $start_tag && $this->is_tag_closer();
+			$end_position = $did_close ? 'after' : 'before';
+			$this->replace_using_bookmarks( $raw_markup, 'before', 'opener', $end_position, 'closer' );
+		} else {
+			// If there's no closing tag then the outer markup continues to the end of the document.
+			$this->replace_using_bookmark( $raw_markup, 'before', 'opener' );
+		}
+
+		$this->seek( 'opener' );
+		$this->release_bookmark( 'opener' );
+		$this->release_bookmark( 'closer' );
+		return true;
+	}
+
+	/**
+	 * Steps through the HTML document and stop at the next tag, if any.
+	 *
+	 * It is unlikely you will want to use this function. It is public
+	 * for special circumstances, mostly for testing, and instead it
+	 * would probably be better to call WP_HTML_Processor::next_tag().
+	 *
+	 * @since 6.4.0
+	 *
+	 * @access private
 	 *
 	 * @throws Exception When unable to allocate a bookmark for the next token in the input HTML document.
 	 *
@@ -502,7 +842,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			 * When moving on to the next node, therefore, if the bottom-most element
 			 * on the stack is a void element, it must be closed.
 			 *
-			 * @TODO: Once self-closing foreign elements and BGSOUND are supported,
+			 * @todo: Once self-closing foreign elements and BGSOUND are supported,
 			 *        they must also be implicitly closed here too. BGSOUND is
 			 *        special since it's only self-closing if the self-closing flag
 			 *        is provided in the opening tag, otherwise it expects a tag closer.
@@ -512,12 +852,9 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 				$this->state->stack_of_open_elements->pop();
 			}
 
-			parent::next_tag( self::VISIT_EVERYTHING );
-		}
-
-		// Finish stepping when there are no more tokens in the document.
-		if ( null === $this->get_tag() ) {
-			return false;
+			if ( ! parent::next_tag( self::VISIT_EVERYTHING ) ) {
+				return false;
+			}
 		}
 
 		$this->state->current_token = new WP_HTML_Token(
@@ -555,7 +892,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 *       to avoid creating the array copy on tag iteration. If this is done, it would likely
 	 *       be more useful to walk up the stack when yielding instead of starting at the top.
 	 *
-	 * Example
+	 * Example:
 	 *
 	 *     $processor = WP_HTML_Processor::create_fragment( '<p><strong><em><img></em></strong></p>' );
 	 *     $processor->next_tag( 'IMG' );
@@ -798,6 +1135,152 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		}
 
 		return "{$this->bookmark_counter}";
+	}
+
+	/**
+	 * Steps through the HTML document until the current open tag is closed.
+	 *
+	 * Tags don't always close with a closing tag. In many situations an open element
+	 * will be closed implicitly by some semantic rule. For example: void elements are
+	 * implicitly closed immediately after they are opened; an opening P tag inside an
+	 * already-opened P element will close the previous P element and insert a new one.
+	 * It's because of these complicated rules that this function exists.
+	 *
+	 * @since 6.4.0
+	 *
+	 * @throws Exception When unable to allocate bookmark for internal tracking.
+	 *
+	 * @return bool|null true if a closing tag was found, false if not, and null if not starting at a matched tag.
+	 */
+	private function step_until_tag_is_closed() {
+		if ( null === $this->get_tag() ) {
+			return null;
+		}
+
+		/** @var WP_HTML_Token $start Reference to the opening tag at the time this function was called. */
+		$start = $this->current_token;
+
+		/** @var bool $keep_searching Whether to continue scanning for a point where the opening tag is closed. */
+		$keep_searching = true;
+
+		/**
+		 * Sets a flag indicating that the starting tag has been closed once
+		 * it's popped from the stack of open elements. This is a listener function.
+		 *
+		 * This function optimizes checking if the original opening element is still
+		 * on the stack of open elements. That element will no longer be open once
+		 * it is popped from the stack of open elements.
+		 *
+		 * @since 6.4.0
+		 *
+		 * @see WP_HTML_Open_Elements::with_pop_listener()
+		 *
+		 * @param WP_HTML_Token $node Node that was popped.
+		 */
+		$tag_is_closed = function ( $node ) use ( &$keep_searching, $start ) {
+			if ( $node === $start ) {
+				$keep_searching = false;
+			}
+		};
+
+		/*
+		 * Normally, when stepping into each new elements, it would be required to walk up the
+		 * stack of open elements and look to see if the starting tag is still open, if it's
+		 * on the stack. By listening for elements that are popped from the stack, however, it's
+		 * possible to know if the starting tag has been closed without anything more than a
+		 * constant boolean access, as the listener is called for each tag that's closed.
+		 *
+		 * The use of the `foreach` here creates a context which ensures that the listener is
+		 * properly removed and cleaned up without having to manually remove it.
+		 */
+		foreach ( $this->state->stack_of_open_elements->with_pop_listener( $tag_is_closed ) as $_ ) {
+
+			/*
+			 * Find where the tag is closed by stepping forward until it's no longer
+			 * on the stack of open elements. Note that the listener above will
+			 * modify `$keep_searching` even though it looks from here like it
+			 * never changes.
+			*/
+			do {
+				$found_tag = $this->step();
+			} while ( $found_tag && $keep_searching );
+		}
+
+		return $found_tag;
+	}
+
+	/**
+	 * Replaces content in the HTML document from a bookmark to the end of the document.
+	 *
+	 * @since 6.4.0
+	 *
+	 * @param string $html                New HTML to insert into document.
+	 * @param string $start_position      "before" to clip before bookmark, "after" to clip after.
+	 * @param string $start_bookmark_name Bookmark name at which to start clipping.
+	 */
+	private function replace_using_bookmark( $html, $start_position, $start_bookmark_name ) {
+		$start_bookmark = $this->bookmarks[ "_{$start_bookmark_name}" ];
+		$start_offset   = 'before' === $start_position ? $start_bookmark->start : $start_bookmark->end + 1;
+
+		$this->lexical_updates[] = new WP_HTML_Text_Replacement( $start_offset, strlen( $this->html ), $html );
+		$this->apply_attributes_updates();
+	}
+
+	/**
+	 * Replaces content in the HTML document from one bookmark to another.
+	 *
+	 * @since 6.4.0
+	 *
+	 * @param string $html                New HTML to insert into document.
+	 * @param string $start_position      "before" to clip before bookmark, "after" to clip after.
+	 * @param string $start_bookmark_name Bookmark name at which to start clipping.
+	 * @param string $end_position        "before" to clip before bookmark, "after" to clip after.
+	 * @param string $end_bookmark_name   Bookmark name at which to end clipping.
+	 */
+	private function replace_using_bookmarks( $html, $start_position, $start_bookmark_name, $end_position, $end_bookmark_name ) {
+		$start_bookmark = $this->bookmarks[ "_{$start_bookmark_name}" ];
+		$end_bookmark   = $this->bookmarks[ "_{$end_bookmark_name}" ];
+		$start_offset   = 'before' === $start_position ? $start_bookmark->start : $start_bookmark->end + 1;
+		$end_offset     = 'before' === $end_position ? $end_bookmark->start : $end_bookmark->end + 1;
+
+		$this->lexical_updates[] = new WP_HTML_Text_Replacement( $start_offset, $end_offset, $html );
+		$this->apply_attributes_updates();
+	}
+
+	/**
+	 * Returns a substring of the input HTML document from a bookmark until the end.
+	 *
+	 * @since 6.4.0
+	 *
+	 * @param string $start_position      "before" to clip before bookmark, "after" to clip after.
+	 * @param string $start_bookmark_name Bookmark name at which to start clipping.
+	 * @return string Clipped substring of input HTMl document.
+	 */
+	private function substr_bookmark( $start_position, $start_bookmark_name ) {
+		$start_bookmark = $this->bookmarks[ "_{$start_bookmark_name}" ];
+		$start_offset   = 'before' === $start_position ? $start_bookmark->start : $start_bookmark->end + 1;
+
+		return substr( $this->html, $start_offset );
+	}
+
+	/**
+	 * Returns a substring of the input HTML document delimited by bookmarks.
+	 *
+	 * @since 6.4.0
+	 *
+	 * @param string $start_position      "before" to clip before bookmark, "after" to clip after.
+	 * @param string $start_bookmark_name Bookmark name at which to start clipping.
+	 * @param string $end_position        "before" to clip before bookmark, "after" to clip after.
+	 * @param string $end_bookmark_name   Bookmark name at which to end clipping.
+	 * @return string Clipped substring of input HTMl document.
+	 */
+	private function substr_bookmarks( $start_position, $start_bookmark_name, $end_position, $end_bookmark_name ) {
+		$start_bookmark = $this->bookmarks[ "_{$start_bookmark_name}" ];
+		$end_bookmark   = $this->bookmarks[ "_{$end_bookmark_name}" ];
+		$start_offset   = 'before' === $start_position ? $start_bookmark->start : $start_bookmark->end + 1;
+		$end_offset     = 'before' === $end_position ? $end_bookmark->start : $end_bookmark->end + 1;
+
+		return substr( $this->html, $start_offset, $end_offset - $start_offset );
 	}
 
 	/*
