@@ -159,6 +159,10 @@ require_once ABSPATH . WPINC . '/class-wp-locale-switcher.php';
 // Run the installer if WordPress is not installed.
 wp_not_installed();
 
+// Generic data types.
+require ABSPATH . WPINC . '/class-wp-list-item.php';
+require ABSPATH . WPINC . '/class-wp-list.php';
+
 // Load most of WordPress.
 require ABSPATH . WPINC . '/class-wp-walker.php';
 require ABSPATH . WPINC . '/class-wp-ajax-response.php';
