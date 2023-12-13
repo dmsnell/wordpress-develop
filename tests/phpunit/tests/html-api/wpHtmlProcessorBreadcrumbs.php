@@ -43,13 +43,15 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 			'B',
 			'BIG',
 			'BUTTON',
-			'CENTER', // Neutralized
+			'CENTER', // Neutralized.
 			'CODE',
+			'DD',
 			'DETAILS',
 			'DIALOG',
 			'DIR',
 			'DIV',
 			'DL',
+			'DT',
 			'EM',
 			'FIELDSET',
 			'FIGCAPTION',
@@ -66,9 +68,11 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 			'HGROUP',
 			'I',
 			'IMG',
+			'LI',
 			'MAIN',
 			'MENU',
 			'NAV',
+			'OL',
 			'P',
 			'SEARCH',
 			'SECTION',
@@ -79,6 +83,7 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 			'SUMMARY',
 			'TT',
 			'U',
+			'UL',
 		);
 
 		$data = array();
@@ -122,15 +127,15 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 	public function data_unsupported_elements() {
 		$unsupported_elements = array(
 			'ABBR',
-			'ACRONYM', // Neutralized
-			'APPLET', // Deprecated
+			'ACRONYM', // Neutralized.
+			'APPLET', // Deprecated.
 			'AREA',
 			'AUDIO',
 			'BASE',
 			'BDI',
 			'BDO',
 			'BGSOUND', // Deprecated; self-closing if self-closing flag provided, otherwise normal.
-			'BLINK', // Deprecated
+			'BLINK', // Deprecated.
 			'BODY',
 			'BR',
 			'CANVAS',
@@ -140,10 +145,8 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 			'COLGROUP',
 			'DATA',
 			'DATALIST',
-			'DD',
 			'DEL',
 			'DEFN',
-			'DT',
 			'EMBED',
 			'FORM',
 			'FRAME',
@@ -154,47 +157,45 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 			'IFRAME',
 			'INPUT',
 			'INS',
-			'ISINDEX', // Deprecated
+			'ISINDEX', // Deprecated.
 			'KBD',
-			'KEYGEN', // Deprecated; void
+			'KEYGEN', // Deprecated; void.
 			'LABEL',
 			'LEGEND',
-			'LI',
 			'LINK',
 			'LISTING', // Deprecated, use PRE instead.
 			'MAP',
 			'MARK',
-			'MARQUEE', // Deprecated
+			'MARQUEE', // Deprecated.
 			'MATH',
 			'META',
 			'METER',
-			'MULTICOL', // Deprecated
-			'NEXTID', // Deprecated
-			'NOBR', // Neutralized
-			'NOEMBED', // Neutralized
-			'NOFRAMES', // Neutralized
+			'MULTICOL', // Deprecated.
+			'NEXTID', // Deprecated.
+			'NOBR', // Neutralized.
+			'NOEMBED', // Neutralized.
+			'NOFRAMES', // Neutralized.
 			'NOSCRIPT',
 			'OBJECT',
-			'OL',
 			'OPTGROUP',
 			'OPTION',
 			'OUTPUT',
 			'PICTURE',
-			'PLAINTEXT', // Neutralized
+			'PLAINTEXT', // Neutralized.
 			'PRE',
 			'PROGRESS',
 			'Q',
-			'RB', // Neutralized
+			'RB', // Neutralized.
 			'RP',
 			'RT',
-			'RTC', // Neutralized
+			'RTC', // Neutralized.
 			'RUBY',
 			'SAMP',
 			'SCRIPT',
 			'SELECT',
 			'SLOT',
 			'SOURCE',
-			'SPACER', // Deprecated
+			'SPACER', // Deprecated.
 			'STYLE',
 			'SUB',
 			'SUP',
@@ -211,7 +212,6 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 			'TITLE',
 			'TR',
 			'TRACK',
-			'UL',
 			'VAR',
 			'VIDEO',
 			'WBR',
@@ -360,6 +360,8 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 			'H4 inside H2'                          => array( '<h2><span>Major<h4 target>Minor</h3></span>', array( 'HTML', 'BODY', 'H2', 'SPAN', 'H4' ), 1 ),
 			'H5 after unclosed H4 inside H2'        => array( '<h2><span>Major<h4>Minor</span></h3><h5 target>', array( 'HTML', 'BODY', 'H2', 'SPAN', 'H5' ), 1 ),
 			'H5 after H4 inside H2'                 => array( '<h2><span>Major<h4>Minor</h4></span></h3><h5 target>', array( 'HTML', 'BODY', 'H5' ), 1 ),
+			'LI after unclosed LI'                  => array( '<li>one<li>two<li target>three', array( 'HTML', 'BODY', 'LI' ), 3 ),
+			'LI in UL in LI'                        => array( '<ul><li>one<ul><li target>two', array( 'HTML', 'BODY', 'UL', 'LI', 'UL', 'LI' ), 1 ),
 		);
 	}
 

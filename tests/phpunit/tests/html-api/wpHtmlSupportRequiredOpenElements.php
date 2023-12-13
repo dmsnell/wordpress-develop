@@ -130,13 +130,6 @@ class Tests_HtmlApi_WpHtmlSupportRequiredOpenElements extends WP_UnitTestCase {
 		$this->ensure_support_is_added_everywhere( 'FOREIGNOBJECT' );
 		$this->ensure_support_is_added_everywhere( 'DESC' );
 		$this->ensure_support_is_added_everywhere( 'TITLE' );
-
-		// These elements are specific to list item scope.
-		$this->ensure_support_is_added_everywhere( 'OL' );
-		$this->ensure_support_is_added_everywhere( 'UL' );
-
-		// This element is the only element that depends on list item scope.
-		$this->ensure_support_is_added_everywhere( 'LI' );
 	}
 
 	/**

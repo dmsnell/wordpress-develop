@@ -644,10 +644,12 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			case '+MAIN':
 			case '+MENU':
 			case '+NAV':
+			case '+OL':
 			case '+P':
 			case '+SEARCH':
 			case '+SECTION':
 			case '+SUMMARY':
+			case '+UL':
 				if ( $this->state->stack_of_open_elements->has_p_in_button_scope() ) {
 					$this->close_a_p_element();
 				}
@@ -681,9 +683,11 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			case '-MAIN':
 			case '-MENU':
 			case '-NAV':
+			case '-OL':
 			case '-SEARCH':
 			case '-SECTION':
 			case '-SUMMARY':
+			case '-UL':
 				if ( ! $this->state->stack_of_open_elements->has_element_in_scope( $tag_name ) ) {
 					// @TODO: Report parse error.
 					// Ignore the token.
@@ -749,6 +753,92 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 				}
 
 				$this->state->stack_of_open_elements->pop_until( '(internal: H1 through H6 - do not use)' );
+				return true;
+
+			/*
+			 * > A start tag whose tag name is "li"
+			 * > A start tag whose tag name is one of: "dd", "dt"
+			 */
+			case '+DD':
+			case '+DT':
+			case '+LI':
+				$this->state->frameset_ok = false;
+				$node                     = $this->state->stack_of_open_elements->current_node();
+
+				in_body_list_loop:
+				if ( $tag_name === $node->node_name ) {
+					$this->generate_implied_end_tags();
+					if ( $tag_name !== $this->state->stack_of_open_elements->current_node()->node_name ) {
+						// @TODO: Indicate a parse error once it's possible. This error does not impact the logic here.
+					}
+
+					$this->state->stack_of_open_elements->pop_until( $tag_name );
+					goto in_body_list_done;
+				}
+
+				if (
+					'ADDRESS' !== $node->node_name &&
+					'DIV' !== $node->node_name &&
+					'P' !== $node->node_name &&
+					$this->is_special( $node->node_name )
+				) {
+					/*
+					 * > If node is in the special category, but is not an address, div,
+					 * > or p element, then jump to the step labeled done below.
+					 */
+					goto in_body_list_done;
+				} else {
+					/*
+					 * > Otherwise, set node to the previous entry in the stack of open elements
+					 * > and return to the step labeled loop.
+					 */
+					foreach ( $this->state->stack_of_open_elements->walk_up( $node ) as $item ) {
+						$node = $item;
+						break;
+					}
+					goto in_body_list_loop;
+				}
+
+				in_body_list_done:
+				if ( $this->state->stack_of_open_elements->has_p_in_button_scope() ) {
+					$this->close_a_p_element();
+				}
+
+				$this->insert_html_element( $this->state->current_token );
+				return true;
+
+			/*
+			 * > An end tag whose tag name is "li"
+			 * > An end tag whose tag name is one of: "dd", "dt"
+			 */
+			case '-DD':
+			case '-DT':
+			case '-LI':
+				if (
+					(
+						'LI' === $tag_name &&
+						! $this->state->stack_of_open_elements->has_element_in_list_item_scope( 'LI' )
+					) ||
+					(
+						'LI' !== $tag_name &&
+						! $this->state->stack_of_open_elements->has_element_in_scope( $tag_name )
+					)
+				) {
+					/*
+					 * This is a parse error, ignore the token.
+					 *
+					 * @TODO: Indicate a parse error once it's possible.
+					 */
+					return $this->step();
+				}
+
+				$this->generate_implied_end_tags( $tag_name );
+
+				if ( $tag_name !== $this->state->stack_of_open_elements->current_node()->node_name ) {
+					// @TODO: Indicate a parse error once it's possible. This error does not impact the logic here.
+				}
+
+				$this->state->stack_of_open_elements->pop_until( $tag_name );
 				return true;
 
 			/*
@@ -1128,6 +1218,9 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 */
 	private function generate_implied_end_tags( $except_for_this_element = null ) {
 		$elements_with_implied_end_tags = array(
+			'DD',
+			'DT',
+			'LI',
 			'P',
 		);
 
@@ -1153,6 +1246,9 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 */
 	private function generate_implied_end_tags_thoroughly() {
 		$elements_with_implied_end_tags = array(
+			'DD',
+			'DT',
+			'LI',
 			'P',
 		);
 
