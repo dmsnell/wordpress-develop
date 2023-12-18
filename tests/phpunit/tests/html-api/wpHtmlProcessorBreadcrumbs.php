@@ -362,6 +362,11 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 			'H5 after H4 inside H2'                 => array( '<h2><span>Major<h4>Minor</h4></span></h3><h5 target>', array( 'HTML', 'BODY', 'H5' ), 1 ),
 			'LI after unclosed LI'                  => array( '<li>one<li>two<li target>three', array( 'HTML', 'BODY', 'LI' ), 3 ),
 			'LI in UL in LI'                        => array( '<ul><li>one<ul><li target>two', array( 'HTML', 'BODY', 'UL', 'LI', 'UL', 'LI' ), 1 ),
+
+			'DD and DT mutually close, LI self-closes (dt 2)' => array( '<dd><dd><dt><dt target><dd><li><li>', array( 'HTML', 'BODY', 'DT' ), 1 ),
+			'DD and DT mutually close, LI self-closes (dd 3)' => array( '<dd><dd><dt><dt><dd target><li><li>', array( 'HTML', 'BODY', 'DD' ), 1 ),
+			'DD and DT mutually close, LI self-closes (li 1)' => array( '<dd><dd><dt><dt><dd><li target><li>', array( 'HTML', 'BODY', 'DD', 'LI' ), 1 ),
+			'DD and DT mutually close, LI self-closes (li 2)' => array( '<dd><dd><dt><dt><dd><li><li target>', array( 'HTML', 'BODY', 'DD', 'LI' ), 1 ),
 		);
 	}
 
