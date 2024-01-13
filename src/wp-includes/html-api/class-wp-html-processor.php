@@ -1472,15 +1472,19 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return bool Whether any formatting elements needed to be reconstructed.
 	 */
 	private function reconstruct_active_formatting_elements() {
+		$count = $this->state->active_formatting_elements->count();
+
 		/*
 		 * > If there are no entries in the list of active formatting elements, then there is nothing
 		 * > to reconstruct; stop this algorithm.
 		 */
-		if ( 0 === $this->state->active_formatting_elements->count() ) {
+		if ( 0 === $count ) {
 			return false;
 		}
 
-		$last_entry = $this->state->active_formatting_elements->current_node();
+		// Start at the last node in the list of active formatting elements.
+		$currently_at = $count - 1;
+		$last_entry   = $this->state->active_formatting_elements->at( $currently_at );
 		if (
 
 			/*
@@ -1499,8 +1503,39 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			return false;
 		}
 
-		$this->last_error = self::ERROR_UNSUPPORTED;
-		throw new WP_HTML_Unsupported_Exception( 'Cannot reconstruct active formatting elements when advancing and rewinding is required.' );
+		$entry = $last_entry;
+
+		while ( $currently_at >= 0 ) {
+			if ( 0 === $currently_at ) {
+				goto create;
+			}
+			$entry = $this->state->active_formatting_elements->at( --$currently_at );
+
+			/*
+			 * > If entry is neither a marker nor an element that is also in the stack of open elements,
+			 * > go to the step labeled rewind.
+			 */
+			if ( 'marker' === $entry->node_name || $this->state->stack_of_open_elements->contains_node( $entry ) ) {
+				break;
+			}
+		}
+
+		advance:
+		$entry = $this->state->active_formatting_elements->at( ++$currently_at );
+
+		create:
+		$this->insert_html_element( $entry );
+
+		/*
+		 * > Replace the entry for entry in the list with an entry for new element.
+		 * This doesn't need to happen here since no DOM is being created.
+		 */
+
+		if ( $count - 1 !== $currently_at ) {
+			goto advance;
+		}
+
+		return true;
 	}
 
 	/**
