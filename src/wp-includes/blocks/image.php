@@ -229,26 +229,32 @@ function block_core_image_render_lightbox( $block_content, $block ) {
 	$body_content = $w->get_updated_html();
 
 	// Add a button alongside image in the body content.
-	$img = null;
-	preg_match( '/<img[^>]+>/', $body_content, $img );
+	$body_content = preg_replace_callback(
+		'/<img[^>]+>/',
+		static function ( $img_match ) use ( $aria_label ) {
+			$button_html = WP_HTML::render(
+				<<<'HTML'
+				<button class="lightbox-trigger" type="button" aria-haspopup="dialog" aria-label="</%label>" ...interactivity>
+					<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 12 12">
+						<path fill="#fff" d="M2 0a2 2 0 0 0-2 2v2h1.5V2a.5.5 0 0 1 .5-.5h2V0H2Zm2 10.5H2a.5.5 0 0 1-.5-.5V8H0v2a2 2 0 0 0 2 2h2v-1.5ZM8 12v-1.5h2a.5.5 0 0 0 .5-.5V8H12v2a2 2 0 0 1-2 2H8Zm2-12a2 2 0 0 1 2 2v2h-1.5V2a.5.5 0 0 0-.5-.5H8V0h2Z" />
+					</svg>
+				</button>
+HTML,
+				array(
+					'label'         => $aria_label,
+					'interactivity' => array(
+						'data-wp-on--click'    => 'actions.core.image.showLightbox',
+						'data-wp-style--right' => 'context.core.image.imageButtonRight',
+						'data-wp-style--top'   => 'context.core.image.imageButtonTop',
+					),
+				)
+			);
 
-	$button =
-		$img[0]
-		. '<button
-			class="lightbox-trigger"
-			type="button"
-			aria-haspopup="dialog"
-			aria-label="' . esc_attr( $aria_label ) . '"
-			data-wp-on--click="actions.core.image.showLightbox"
-			data-wp-style--right="context.core.image.imageButtonRight"
-			data-wp-style--top="context.core.image.imageButtonTop"
-		>
-			<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 12 12">
-				<path fill="#fff" d="M2 0a2 2 0 0 0-2 2v2h1.5V2a.5.5 0 0 1 .5-.5h2V0H2Zm2 10.5H2a.5.5 0 0 1-.5-.5V8H0v2a2 2 0 0 0 2 2h2v-1.5ZM8 12v-1.5h2a.5.5 0 0 0 .5-.5V8H12v2a2 2 0 0 1-2 2H8Zm2-12a2 2 0 0 1 2 2v2h-1.5V2a.5.5 0 0 0-.5-.5H8V0h2Z" />
-			</svg>
-		</button>';
-
-	$body_content = preg_replace( '/<img[^>]+>/', $button, $body_content );
+			return $img_match[0] . $button_html;
+		},
+		$body_content,
+		1
+	);
 
 	// We need both a responsive image and an enlarged image to animate
 	// the zoom seamlessly on slow internet connections; the responsive
@@ -295,40 +301,46 @@ function block_core_image_render_lightbox( $block_content, $block ) {
 	if ( wp_theme_has_theme_json() ) {
 		$global_styles_color = wp_get_global_styles( array( 'color' ) );
 		if ( ! empty( $global_styles_color['background'] ) ) {
-			$background_color = esc_attr( $global_styles_color['background'] );
+			$background_color = $global_styles_color['background'];
 		}
 		if ( ! empty( $global_styles_color['text'] ) ) {
-			$close_button_color = esc_attr( $global_styles_color['text'] );
+			$close_button_color = $global_styles_color['text'];
 		}
 	}
 
-	$close_button_icon  = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M13 11.8l6.1-6.3-1-1-6.1 6.2-6.1-6.2-1 1 6.1 6.3-6.5 6.7 1 1 6.5-6.6 6.5 6.6 1-1z"></path></svg>';
-	$close_button_label = esc_attr__( 'Close' );
-
-	$lightbox_html = <<<HTML
-        <div data-wp-body="" class="wp-lightbox-overlay $lightbox_animation"
-            data-wp-bind--role="selectors.core.image.roleAttribute"
-            data-wp-bind--aria-label="selectors.core.image.dialogLabel"
-            data-wp-class--initialized="context.core.image.initialized"
-            data-wp-class--active="context.core.image.lightboxEnabled"
-            data-wp-class--hideAnimationEnabled="context.core.image.hideAnimationEnabled"
-            data-wp-bind--aria-modal="selectors.core.image.ariaModal"
-            data-wp-effect="effects.core.image.initLightbox"
-            data-wp-on--keydown="actions.core.image.handleKeydown"
-            data-wp-on--touchstart="actions.core.image.handleTouchStart"
-            data-wp-on--touchmove="actions.core.image.handleTouchMove"
-            data-wp-on--touchend="actions.core.image.handleTouchEnd"
-            data-wp-on--click="actions.core.image.hideLightbox"
-            tabindex="-1"
-            >
-                <button type="button" aria-label="$close_button_label" style="fill: $close_button_color" class="close-button" data-wp-on--click="actions.core.image.hideLightbox">
-                    $close_button_icon
-                </button>
-                <div class="lightbox-image-container">$initial_image_content</div>
-                <div class="lightbox-image-container">$enlarged_image_content</div>
-                <div class="scrim" style="background-color: $background_color" aria-hidden="true"></div>
-        </div>
-HTML;
+	$lightbox_html = WP_HTML::render(
+		<<<HTML
+		<div class="wp-lightbox-overlay </%lightbox_animation_class>" tabindex="-1" ...interactivity>
+			<button type="button" aria-label="</%close_label>" style="fill: </%close_button_color>" class="close-button" data-wp-on--click="actions.core.image.hideLightbox">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M13 11.8l6.1-6.3-1-1-6.1 6.2-6.1-6.2-1 1 6.1 6.3-6.5 6.7 1 1 6.5-6.6 6.5 6.6 1-1z"></path></svg>
+			</button>
+			<div class="lightbox-image-container">$initial_image_content</div>
+			<div class="lightbox-image-container">$enlarged_image_content</div>
+			<div class="scrim" style="background-color: </%background_color>" aria-hidden="true"></div>
+		</div>
+HTML,
+		array(
+			'background_color'         => $background_color,
+			'close_button_color'       => $close_button_color,
+			'close_label'              => __( 'Close' ),
+			'lightbox_animation_class' => $lightbox_animation,
+			'interactivity'            => array(
+				'data-wp-bind--role'                  => 'selectors.core.image.roleAttribute',
+				'data-wp-bind--aria-label'            => 'selectors.core.image.dialogLabel',
+				'data-wp-body'                        => '',
+				'data-wp-class--initialized'          => 'context.core.image.initialized',
+				'data-wp-class--active'               => 'context.core.image.lightboxEnabled',
+				'data-wp-class--hideAnimationEnabled' => 'context.core.image.hideAnimationEnabled',
+				'data-wp-bind--aria-modal'            => 'selectors.core.image.ariaModal',
+				'data-wp-effect'                      => 'effects.core.image.initLightbox',
+				'data-wp-on--keydown'                 => 'actions.core.image.handleKeydown',
+				'data-wp-on--touchstart'              => 'actions.core.image.handleTouchStart',
+				'data-wp-on--touchmove'               => 'actions.core.image.handleTouchMove',
+				'data-wp-on--touchend'                => 'actions.core.image.handleTouchEnd',
+				'data-wp-on--click'                   => 'actions.core.image.hideLightbox',
+			),
+		)
+	);
 
 	return str_replace( '</figure>', $lightbox_html . '</figure>', $body_content );
 }

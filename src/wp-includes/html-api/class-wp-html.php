@@ -73,7 +73,7 @@ class WP_HTML {
 	 * @access private
 	 *
 	 * @param string $template The HTML template.
-	 * @param string $args     Array of key/value pairs providing substitue values for the placeholders.
+	 * @param array  $args     Array of key/value pairs providing substitue values for the placeholders.
 	 * @return string The rendered HTML.
 	 */
 	public static function render( $template, $args ) {
