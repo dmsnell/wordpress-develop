@@ -981,7 +981,126 @@ function wp_kses_split( $content, $allowed_html, $allowed_protocols ) {
 	$pass_allowed_html      = $allowed_html;
 	$pass_allowed_protocols = $allowed_protocols;
 
-	return preg_replace_callback( '%(<!--.*?(-->|$))|(<[^>]*(>|$)|>)%', '_wp_kses_split_callback', $content );
+	return wp_kses_loop( $content, $allowed_html, $allowed_protocols );
+
+//	return preg_replace_callback( '%(<!--.*?(-->|$))|(<[^>]*(>|$)|>)%', '_wp_kses_split_callback', $content );
+}
+
+function wp_kses_loop( $content, $allowed_html_elements, $allowed_url_protocols ) {
+	$processor = new class ( $content ) extends WP_HTML_Tag_Processor {
+		public function remove_token() {
+			if (
+				WP_HTML_Tag_Processor::STATE_READY === $this->parser_state ||
+				WP_HTML_Tag_Processor::STATE_COMPLETE === $this->parser_state ||
+				WP_HTML_Tag_Processor::STATE_INCOMPLETE_INPUT === $this->parser_state
+			) {
+				return false;
+			}
+
+			$this->set_bookmark( 'here' );
+			$here = $this->bookmarks['here'];
+
+			$this->lexical_updates[] = new WP_HTML_Text_Replacement( $here->start, $here->length, '' );
+			return true;
+		}
+	};
+
+	/*
+	 * `true` for an attribute value means it's requried.
+	 *
+	 * [
+	 *    [ 'label' => [ 'for' => [], 'class' => [] ],
+	 *    [ 'a' => [ 'href' => true, 'title' => true ] ],
+	 * ]
+	 */
+	if ( ! is_array( $allowed_html_elements ) ) {
+		$allowed_html_elements = wp_kses_allowed_html( $allowed_html_elements );
+	}
+
+	$allowed_tag_names   = array();
+	$allowed_attributes  = array();
+	$required_attributes = array();
+	foreach ( $allowed_html_elements as $tag_name => $attribute_list ) {
+		$tag_name                         = strtoupper( $tag_name );
+		$allowed_tag_names[]              = $tag_name;
+		$allowed_attributes[ $tag_name ]  = array();
+		$required_attributes[ $tag_name ] = array();
+		foreach ( $attribute_list as $attribute_name => $sentinel ) {
+			$attribute_name                    = strtolower( $attribute_name );
+			$allowed_attributes[ $tag_name ][] = $attribute_name;
+			if ( true === $sentinel ) {
+				$required_attributes[ $tag_name ][] = $attribute_name;
+			}
+		}
+	}
+
+	while ( $processor->next_token() ) {
+		$token_name = $processor->get_token_name();
+		$token_type = $processor->get_token_type();
+
+		if ( '#tag' !== $token_type ) {
+			continue;
+		}
+
+		$tag_is_allowed = in_array( $token_name, $allowed_tag_names, true );
+		if ( ! $tag_is_allowed ) {
+			$processor->remove_token();
+			continue;
+		}
+
+		if ( $processor->is_tag_closer() ) {
+			continue;
+		}
+
+		$allowed_attribute_names = $allowed_attributes[ $token_name ];
+		$needs_required          = $required_attributes[ $token_name ];
+		$to_remove               = array();
+		$to_update               = array();
+		foreach ( $processor->get_attribute_names_with_prefix( '' ) ?? array() as $name ) {
+			if ( ! in_array( $name, $allowed_attribute_names, true ) ) {
+				$to_remove[] = $name;
+			}
+
+			$required_at = array_search( $name, $needs_required, true );
+			if ( false !== $required_at ) {
+				array_splice( $needs_required, $required_at, 1 );
+			}
+
+			$attr_name     = $name;
+			$attr_value    = $processor->get_attribute( $name );
+			$escaped_value = is_string( $attr_value ) ? esc_attr( $attr_value ) : '';
+			$attr_whole    = is_string( $attr_value ) ? "{$name}=\"{$escaped_value}\"" : $name;
+			$attr_vless    = true === $attr_value;
+			$attr_element  = $tag_name;
+			if ( ! wp_kses_attr_check( $attr_name, $attr_value, $attr_whole, $attr_vless, $attr_element, $allowed_html_elements ) ) {
+				$to_remove[] = $name;
+				continue;
+			}
+
+			if ( $attr_value !== $processor->get_attribute( $name ) ) {
+				$to_update[ $name ] = $attr_value;
+			}
+		}
+
+		if ( count( $needs_required ) > 0 ) {
+			foreach ( $processor->get_attribute_names_with_prefix( '' ) ?? array() as $name ) {
+				$processor->remove_attribute( $name );
+			}
+			continue;
+		}
+
+		foreach ( $to_update as $name => $value ) {
+			$processor->set_attribute( $name, $value );
+		}
+
+		foreach ( $to_remove as $name ) {
+			$processor->remove_attribute( $name );
+		}
+
+		// @todo Perform wp_kses_attr_check
+	}
+
+	return $processor->get_updated_html();
 }
 
 /**
