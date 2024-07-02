@@ -40,7 +40,6 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 			'ABBR',
 			'ACRONYM', // Neutralized.
 			'ADDRESS',
-			'APPLET', // Deprecated.
 			'AREA',
 			'ARTICLE',
 			'ASIDE',
@@ -86,28 +85,25 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 			'I',
 			'IMG',
 			'INS',
+			'LI',
 			'ISINDEX', // Deprecated.
 			'KBD',
 			'KEYGEN', // Deprecated.
 			'LABEL',
 			'LEGEND',
-			'LI',
 			'LISTING', // Deprecated.
 			'MAIN',
 			'MAP',
 			'MARK',
-			'MARQUEE', // Deprecated.
 			'MENU',
 			'METER',
 			'MULTICOL', // Deprecated.
 			'NAV',
 			'NEXTID', // Deprecated.
-			'OBJECT',
 			'OL',
 			'OUTPUT',
 			'P',
 			'PICTURE',
-			'PRE',
 			'PROGRESS',
 			'Q',
 			'RUBY',
@@ -129,7 +125,6 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 			'UL',
 			'VAR',
 			'VIDEO',
-			'WBR',
 		);
 
 		$data = array();
@@ -137,11 +132,7 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 			$data[ $tag_name ] = array( "<{$tag_name}>", $tag_name );
 		}
 
-		$data['IFRAME']                    = array( '<iframe></iframe>', 'IFRAME' );
 		$data['IMAGE (treated as an IMG)'] = array( '<image>', 'IMG' );
-		$data['NOEMBED']                   = array( '<noembed></noembed>', 'NOEMBED' ); // Neutralized.
-		$data['TEXTAREA']                  = array( '<textarea></textarea>', 'TEXTAREA' );
-		$data['XMP']                       = array( '<xmp></xmp>', 'XMP' ); // Deprecated, use PRE instead.
 
 		return $data;
 	}
@@ -176,6 +167,7 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 	 */
 	public static function data_unsupported_elements() {
 		$unsupported_elements = array(
+			'APPLET', // Deprecated.
 			'BASE',
 			'BGSOUND', // Deprecated; self-closing if self-closing flag provided, otherwise normal.
 			'BODY',
@@ -187,12 +179,16 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 			'FRAMESET',
 			'HEAD',
 			'HTML',
+			'IFRAME',
 			'LINK',
+			'MARQUEE', // Deprecated.
 			'MATH',
 			'META',
 			'NOBR', // Neutralized.
+			'NOEMBED', // Neutralized.
 			'NOFRAMES', // Neutralized.
 			'NOSCRIPT',
+			'OBJECT',
 			'OPTGROUP',
 			'OPTION',
 			'PLAINTEXT', // Neutralized.
@@ -208,11 +204,13 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 			'TBODY',
 			'TD',
 			'TEMPLATE',
+			'TEXTAREA',
 			'TFOOT',
 			'TH',
 			'THEAD',
 			'TITLE',
 			'TR',
+			'XMP', // Deprecated, use PRE instead.
 		);
 
 		$data = array();

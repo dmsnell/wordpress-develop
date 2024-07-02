@@ -1277,18 +1277,6 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 				return true;
 
 			/*
-			 * > A start tag whose tag name is one of: "applet", "marquee", "object"
-			 */
-			case '+APPLET':
-			case '+MARQUEE':
-			case '+OBJECT':
-				$this->reconstruct_active_formatting_elements();
-				$this->insert_html_element( $this->state->current_token );
-				$this->state->active_formatting_elements->insert_marker();
-				$this->state->frameset_ok = false;
-				return true;
-
-			/*
 			 * > An end tag whose tag name is "br"
 			 * >   Parse error. Drop the attributes from the token, and act as described in the next
 			 * >   entry; i.e. act as if this was a "br" start tag token with no attributes, rather
@@ -1348,41 +1336,6 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			case '+TRACK':
 				$this->insert_html_element( $this->state->current_token );
 				return true;
-
-			/*
-			 * > A start tag whose tag name is "textarea"
-			 */
-			case '+TEXTAREA':
-				$this->insert_html_element( $this->state->current_token );
-				$this->state->frameset_ok = false;
-				return true;
-
-			/*
-			 * > A start tag whose tag name is "xmp"
-			 */
-			case '+XMP':
-				if ( $this->state->stack_of_open_elements->has_p_in_button_scope() ) {
-					$this->close_a_p_element();
-				}
-				$this->reconstruct_active_formatting_elements();
-				$this->insert_html_element( $this->state->current_token );
-				$this->state->frameset_ok = false;
-				return true;
-
-			/*
-			 * > A start tag whose tag name is "iframe"
-			 */
-			case '+IFRAME':
-				$this->insert_html_element( $this->state->current_token );
-				$this->state->frameset_ok = false;
-				return true;
-
-			/*
-			 * > A start tag whose tag name is "noembed"
-			 */
-			case '+NOEMBED':
-				$this->insert_html_element( $this->state->current_token );
-				return true;
 		}
 
 		/*
@@ -1402,6 +1355,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		 * @see https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inbody
 		 */
 		switch ( $token_name ) {
+			case 'APPLET':
 			case 'BASE':
 			case 'BASEFONT':
 			case 'BGSOUND':
@@ -1414,12 +1368,16 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			case 'FRAMESET':
 			case 'HEAD':
 			case 'HTML':
+			case 'IFRAME':
 			case 'LINK':
+			case 'MARQUEE':
 			case 'MATH':
 			case 'META':
 			case 'NOBR':
+			case 'NOEMBED':
 			case 'NOFRAMES':
 			case 'NOSCRIPT':
+			case 'OBJECT':
 			case 'OPTGROUP':
 			case 'OPTION':
 			case 'PLAINTEXT':
@@ -1436,11 +1394,13 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			case 'TBODY':
 			case 'TD':
 			case 'TEMPLATE':
+			case 'TEXTAREA':
 			case 'TFOOT':
 			case 'TH':
 			case 'THEAD':
 			case 'TITLE':
 			case 'TR':
+			case 'XMP':
 				$this->last_error = self::ERROR_UNSUPPORTED;
 				throw new WP_HTML_Unsupported_Exception( "Cannot process {$token_name} element." );
 		}

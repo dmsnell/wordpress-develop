@@ -388,6 +388,7 @@ class Tests_HtmlApi_WpHtmlProcessor extends WP_UnitTestCase {
 	 */
 	public static function data_unsupported_special_in_body_tags() {
 		return array(
+			'APPLET'    => array( 'APPLET' ),
 			'BASE'      => array( 'BASE' ),
 			'BASEFONT'  => array( 'BASEFONT' ),
 			'BGSOUND'   => array( 'BGSOUND' ),
@@ -400,12 +401,16 @@ class Tests_HtmlApi_WpHtmlProcessor extends WP_UnitTestCase {
 			'FRAMESET'  => array( 'FRAMESET' ),
 			'HEAD'      => array( 'HEAD' ),
 			'HTML'      => array( 'HTML' ),
+			'IFRAME'    => array( 'IFRAME' ),
 			'LINK'      => array( 'LINK' ),
+			'MARQUEE'   => array( 'MARQUEE' ),
 			'MATH'      => array( 'MATH' ),
 			'META'      => array( 'META' ),
 			'NOBR'      => array( 'NOBR' ),
+			'NOEMBED'   => array( 'NOEMBED' ),
 			'NOFRAMES'  => array( 'NOFRAMES' ),
 			'NOSCRIPT'  => array( 'NOSCRIPT' ),
+			'OBJECT'    => array( 'OBJECT' ),
 			'OPTGROUP'  => array( 'OPTGROUP' ),
 			'OPTION'    => array( 'OPTION' ),
 			'PLAINTEXT' => array( 'PLAINTEXT' ),
@@ -422,11 +427,13 @@ class Tests_HtmlApi_WpHtmlProcessor extends WP_UnitTestCase {
 			'TBODY'     => array( 'TBODY' ),
 			'TD'        => array( 'TD' ),
 			'TEMPLATE'  => array( 'TEMPLATE' ),
+			'TEXTAREA'  => array( 'TEXTAREA' ),
 			'TFOOT'     => array( 'TFOOT' ),
 			'TH'        => array( 'TH' ),
 			'THEAD'     => array( 'THEAD' ),
 			'TITLE'     => array( 'TITLE' ),
 			'TR'        => array( 'TR' ),
+			'XMP'       => array( 'XMP' ),
 		);
 	}
 
