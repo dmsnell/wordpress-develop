@@ -705,7 +705,7 @@ function dropdown_cats($optionall = 1, $all = 'All', $orderby = 'ID', $order = '
 
 	$show_option_none = '';
 	if ( $optionnone )
-		$show_option_none = __('None');
+	$show_option_none = _x( 'None', 'Categories dropdown (show_option_none parameter)' );
 
 	$vars = compact('show_option_all', 'show_option_none', 'orderby', 'order',
 					'show_last_update', 'show_count', 'hide_empty', 'selected', 'exclude');
@@ -996,11 +996,11 @@ function get_links($category = -1, $before = '', $after = '<br />', $between = '
 
 		$output .= '<a href="' . $the_link . '"' . $rel . $title . $target. '>';
 
-		if ( $row->link_image != null && $show_images ) {
+		if ( '' != $row->link_image && $show_images ) {
 			if ( str_contains( $row->link_image, 'http' ) )
-				$output .= "<img src=\"$row->link_image\" $alt $title />";
+				$output .= '<img src="' . $row->link_image . '"' . $alt . $title . ' />';
 			else // If it's a relative path.
-				$output .= "<img src=\"" . get_option('siteurl') . "$row->link_image\" $alt $title />";
+				$output .= '<img src="' . get_option('siteurl') . $row->link_image . '"' . $alt . $title . ' />';
 		} else {
 			$output .= $name;
 		}
@@ -1910,7 +1910,7 @@ function get_attachment_icon_src( $id = 0, $fullsize = false ) {
 
 		$src = wp_get_attachment_url( $post->ID );
 		$src_file = & $file;
-	} elseif ( $src = wp_mime_type_icon( $post->ID ) ) {
+	} elseif ( $src = wp_mime_type_icon( $post->ID, '.svg' ) ) {
 		// No thumb, no image. We'll look for a mime-related icon instead.
 
 		/** This filter is documented in wp-includes/post.php */
@@ -2634,7 +2634,7 @@ function get_user_metavalues($ids) {
 /**
  * Sanitize every user field.
  *
- * If the context is 'raw', then the user object or array will get minimal santization of the int fields.
+ * If the context is 'raw', then the user object or array will get minimal sanitization of the int fields.
  *
  * @since 2.3.0
  * @deprecated 3.3.0
@@ -3336,7 +3336,9 @@ function gd_edit_image_support($mime_type) {
 				return (imagetypes() & IMG_GIF) != 0;
 			case 'image/webp':
 				return (imagetypes() & IMG_WEBP) != 0;
-		}
+			case 'image/avif':
+				return (imagetypes() & IMG_AVIF) != 0;
+			}
 	} else {
 		switch( $mime_type ) {
 			case 'image/jpeg':
@@ -3347,6 +3349,8 @@ function gd_edit_image_support($mime_type) {
 				return function_exists('imagecreatefromgif');
 			case 'image/webp':
 				return function_exists('imagecreatefromwebp');
+			case 'image/avif':
+				return function_exists('imagecreatefromavif');
 		}
 	}
 	return false;
@@ -5436,7 +5440,7 @@ function _wp_theme_json_webfonts_handler() {
 		$settings = WP_Theme_JSON_Resolver::get_merged_data()->get_settings();
 
 		// If in the editor, add webfonts defined in variations.
-		if ( is_admin() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
+		if ( is_admin() || wp_is_rest_endpoint() ) {
 			$variations = WP_Theme_JSON_Resolver::get_style_variations();
 			foreach ( $variations as $variation ) {
 				// Skip if fontFamilies are not defined in the variation.
@@ -6238,4 +6242,71 @@ function the_block_template_skip_link() {
 	}() );
 	</script>
 	<?php
+}
+
+/**
+ * Ensure that the view script has the `wp-interactivity` dependency.
+ *
+ * @since 6.4.0
+ * @deprecated 6.5.0
+ */
+function block_core_query_ensure_interactivity_dependency() {
+	_deprecated_function( __FUNCTION__, '6.5.0', 'wp_register_script_module' );
+}
+
+/**
+ * Ensure that the view script has the `wp-interactivity` dependency.
+ *
+ * @since 6.4.0
+ * @deprecated 6.5.0
+ */
+function block_core_file_ensure_interactivity_dependency() {
+	_deprecated_function( __FUNCTION__, '6.5.0', 'wp_register_script_module' );
+}
+
+/**
+ * Ensures that the view script has the `wp-interactivity` dependency.
+ *
+ * @since 6.4.0
+ * @deprecated 6.5.0
+ */
+function block_core_image_ensure_interactivity_dependency() {
+	_deprecated_function( __FUNCTION__, '6.5.0', 'wp_register_script_module' );
+}
+
+/**
+ * Updates the block content with elements class names.
+ *
+ * @deprecated 6.6.0 Generation of element class name is handled via `render_block_data` filter.
+ *
+ * @since 5.8.0
+ * @since 6.4.0 Added support for button and heading element styling.
+ * @access private
+ *
+ * @param string $block_content Rendered block content.
+ * @param array  $block         Block object.
+ * @return string Filtered block content.
+ */
+function wp_render_elements_support( $block_content, $block ) {
+	_deprecated_function( __FUNCTION__, '6.6.0', 'wp_render_elements_class_name' );
+	return $block_content;
+}
+
+/**
+ * Processes the directives on the rendered HTML of the interactive blocks.
+ *
+ * This processes only one root interactive block at a time because the
+ * rendered HTML of that block contains the rendered HTML of all its inner
+ * blocks, including any interactive block. It does so by ignoring all the
+ * interactive inner blocks until the root interactive block is processed.
+ *
+ * @since 6.5.0
+ * @deprecated 6.6.0
+ *
+ * @param array $parsed_block The parsed block.
+ * @return array The same parsed block.
+ */
+function wp_interactivity_process_directives_of_interactive_blocks( array $parsed_block ): array {
+	_deprecated_function( __FUNCTION__, '6.6.0' );
+	return $parsed_block;
 }
