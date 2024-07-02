@@ -1373,6 +1373,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			 * > A start tag whose tag name is "iframe"
 			 */
 			case '+IFRAME':
+				$this->insert_html_element( $this->state->current_token );
 				$this->state->frameset_ok = false;
 				return true;
 
@@ -1380,6 +1381,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			 * > A start tag whose tag name is "noembed"
 			 */
 			case '+NOEMBED':
+				$this->insert_html_element( $this->state->current_token );
 				return true;
 		}
 
