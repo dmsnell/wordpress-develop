@@ -221,7 +221,7 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 	/**
 	 * Ensures that formats inside unclosed A elements are reconstructed.
 	 *
-	 * @ticket {TICKET_NUMBER}
+	 * @ticket 61576
 	 */
 	public function test_reconstructs_formatting_from_unclosed_a_elements() {
 		$processor = WP_HTML_Processor::create_fragment( '<a><strong>Click <a><big>Here</big></a></strong></a>' );
@@ -244,7 +244,7 @@ class Tests_HtmlApi_WpHtmlProcessorBreadcrumbs extends WP_UnitTestCase {
 	/**
 	 * Ensures that unclosed A elements are reconstructed.
 	 *
-	 * @ticket {TICKET_NUMBER}
+	 * @ticket 61576
 	 */
 	public function test_reconstructs_unclosed_a_elements() {
 		$processor = WP_HTML_Processor::create_fragment( '<a><div><a></div></a>' );
