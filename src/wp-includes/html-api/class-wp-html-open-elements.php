@@ -49,7 +49,9 @@ class WP_HTML_Open_Elements {
 	 *
 	 * @var bool
 	 */
-	private $has_p_in_button_scope = false;
+	public $has_p_in_button_scope = false;
+
+	public $has_open_template = 0;
 
 	/**
 	 * A function that will be called when an item is popped off the stack of open elements.
@@ -659,6 +661,8 @@ class WP_HTML_Open_Elements {
 			 * cases where the precalculated value needs to change.
 			 */
 			switch ( $item->node_name ) {
+				case 'TEMPLATE':
+					++$this->has_open_template;
 				case 'APPLET':
 				case 'BUTTON':
 				case 'CAPTION':
@@ -668,7 +672,6 @@ class WP_HTML_Open_Elements {
 				case 'TH':
 				case 'MARQUEE':
 				case 'OBJECT':
-				case 'TEMPLATE':
 					$this->has_p_in_button_scope = false;
 					break;
 			}
@@ -694,6 +697,8 @@ class WP_HTML_Open_Elements {
 		 * cases where the precalculated value needs to change.
 		 */
 		switch ( $item->node_name ?? null ) {
+			case 'TEMPLATE':
+				--$this->has_open_template;
 			case 'APPLET':
 			case 'BUTTON':
 			case 'CAPTION':
@@ -704,7 +709,6 @@ class WP_HTML_Open_Elements {
 			case 'TH':
 			case 'MARQUEE':
 			case 'OBJECT':
-			case 'TEMPLATE':
 				$this->has_p_in_button_scope = $this->has_element_in_button_scope( 'P' );
 				break;
 		}

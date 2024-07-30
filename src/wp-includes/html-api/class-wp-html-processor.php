@@ -1473,7 +1473,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			 * > An end tag whose tag name is "template"
 			 */
 			case '-TEMPLATE':
-				if ( ! $this->state->stack_of_open_elements->contains( 'TEMPLATE' ) ) {
+				if ( ! $this->state->stack_of_open_elements->has_open_template ) {
 					// @todo Indicate a parse error once it's possible.
 					return $this->step();
 				}
@@ -1784,13 +1784,8 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return bool Whether an element was found.
 	 */
 	private function step_in_body(): bool {
-		$token_name = $this->get_token_name();
-		$token_type = $this->get_token_type();
-		$op_sigil   = '#tag' === $token_type ? ( parent::is_tag_closer() ? '-' : '+' ) : '';
-		$op         = "{$op_sigil}{$token_name}";
-
-		switch ( $op ) {
-			case '#text':
+		switch ( $this->parser_state ) {
+			case WP_HTML_Tag_Processor::STATE_TEXT_NODE:
 				$current_token = $this->bookmarks[ $this->state->current_token->bookmark_name ];
 
 				/*
@@ -1802,16 +1797,22 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 				 * here, but if there are any other characters in the stream
 				 * the active formats should be reconstructed.
 				 */
-				if (
-					1 <= $current_token->length &&
-					"\x00" === $this->html[ $current_token->start ] &&
-					strspn( $this->html, "\x00", $current_token->start, $current_token->length ) === $current_token->length
-				) {
+				if ( strspn( $this->html, "\x00", $current_token->start, $current_token->length ) === $current_token->length ) {
 					// Parse error: ignore the token.
 					return $this->step();
 				}
 
 				$this->reconstruct_active_formatting_elements();
+
+				// No need to decode the text if there are no character references.
+				if (
+					strcspn( $this->html, '&', $current_token->start, $current_token->length ) === $current_token->length &&
+					strspn( $this->html, " \t\f\r\n", $current_token->start, $current_token->length ) === $current_token->length
+				) {
+					$this->state->frameset_ok = false;
+					$this->insert_html_element( $this->state->current_token );
+					return true;
+				}
 
 				/*
 				 * Whitespace-only text does not affect the frameset-ok flag.
@@ -1826,24 +1827,31 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 				$this->insert_html_element( $this->state->current_token );
 				return true;
 
-			case '#comment':
-			case '#funky-comment':
-			case '#presumptuous-tag':
+			case WP_HTML_Tag_Processor::STATE_MATCHED_TAG:
+				break;
+
+			case WP_HTML_Tag_Processor::STATE_COMMENT:
+			case WP_HTML_Tag_Processor::STATE_FUNKY_COMMENT:
 				$this->insert_html_element( $this->state->current_token );
 				return true;
 
-			/*
-			 * > A DOCTYPE token
-			 * > Parse error. Ignore the token.
-			 */
-			case 'html':
+			case WP_HTML_Tag_Processor::STATE_DOCTYPE:
 				return $this->step();
 
+			default:
+				return false;
+		}
+
+		$token_name = $this->get_tag();
+		$op_sigil   = parent::is_tag_closer() ? '-' : '+';
+		$op         = "{$op_sigil}{$token_name}";
+
+		switch ( $op ) {
 			/*
 			 * > A start tag whose tag name is "html"
 			 */
 			case '+HTML':
-				if ( ! $this->state->stack_of_open_elements->contains( 'TEMPLATE' ) ) {
+				if ( ! $this->state->stack_of_open_elements->has_open_template ) {
 					/*
 					 * > Otherwise, for each attribute on the token, check to see if the attribute
 					 * > is already present on the top element of the stack of open elements. If
@@ -1884,7 +1892,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 				if (
 					1 === $this->state->stack_of_open_elements->count() ||
 					'BODY' !== $this->state->stack_of_open_elements->at( 2 ) ||
-					$this->state->stack_of_open_elements->contains( 'TEMPLATE' )
+					$this->state->stack_of_open_elements->has_open_template
 				) {
 					// Ignore the token.
 					return $this->step();
@@ -1997,7 +2005,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			case '+SECTION':
 			case '+SUMMARY':
 			case '+UL':
-				if ( $this->state->stack_of_open_elements->has_p_in_button_scope() ) {
+				if ( $this->state->stack_of_open_elements->has_p_in_button_scope ) {
 					$this->close_a_p_element();
 				}
 
@@ -2013,7 +2021,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			case '+H4':
 			case '+H5':
 			case '+H6':
-				if ( $this->state->stack_of_open_elements->has_p_in_button_scope() ) {
+				if ( $this->state->stack_of_open_elements->has_p_in_button_scope ) {
 					$this->close_a_p_element();
 				}
 
@@ -2036,7 +2044,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			 */
 			case '+PRE':
 			case '+LISTING':
-				if ( $this->state->stack_of_open_elements->has_p_in_button_scope() ) {
+				if ( $this->state->stack_of_open_elements->has_p_in_button_scope ) {
 					$this->close_a_p_element();
 				}
 
@@ -2056,14 +2064,14 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			 * > A start tag whose tag name is "form"
 			 */
 			case '+FORM':
-				$stack_contains_template = $this->state->stack_of_open_elements->contains( 'TEMPLATE' );
+				$stack_contains_template = $this->state->stack_of_open_elements->has_open_template;
 
 				if ( isset( $this->state->form_element ) && ! $stack_contains_template ) {
 					// Parse error: ignore the token.
 					return $this->step();
 				}
 
-				if ( $this->state->stack_of_open_elements->has_p_in_button_scope() ) {
+				if ( $this->state->stack_of_open_elements->has_p_in_button_scope ) {
 					$this->close_a_p_element();
 				}
 
@@ -2125,7 +2133,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 				}
 
 				in_body_list_done:
-				if ( $this->state->stack_of_open_elements->has_p_in_button_scope() ) {
+				if ( $this->state->stack_of_open_elements->has_p_in_button_scope ) {
 					$this->close_a_p_element();
 				}
 
@@ -2133,7 +2141,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 				return true;
 
 			case '+PLAINTEXT':
-				if ( $this->state->stack_of_open_elements->has_p_in_button_scope() ) {
+				if ( $this->state->stack_of_open_elements->has_p_in_button_scope ) {
 					$this->close_a_p_element();
 				}
 
@@ -2216,7 +2224,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			 * > An end tag whose tag name is "form"
 			 */
 			case '-FORM':
-				if ( ! $this->state->stack_of_open_elements->contains( 'TEMPLATE' ) ) {
+				if ( ! $this->state->stack_of_open_elements->has_open_template ) {
 					$node                      = $this->state->form_element;
 					$this->state->form_element = null;
 
@@ -2269,7 +2277,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			 * > An end tag whose tag name is "p"
 			 */
 			case '-P':
-				if ( ! $this->state->stack_of_open_elements->has_p_in_button_scope() ) {
+				if ( ! $this->state->stack_of_open_elements->has_p_in_button_scope ) {
 					$this->insert_html_element( $this->state->current_token, 'virtual' );
 				}
 
@@ -3768,7 +3776,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		/*
 		 * > An end-of-file token
 		 */
-		if ( ! $this->state->stack_of_open_elements->contains( 'TEMPLATE' ) ) {
+		if ( ! $this->state->stack_of_open_elements->has_open_template ) {
 			// Stop parsing.
 			return false;
 		}
