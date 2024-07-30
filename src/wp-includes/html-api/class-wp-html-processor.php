@@ -399,15 +399,6 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 
 		$this->state = new WP_HTML_Processor_State();
 
-		$this->state->stack_of_open_elements->set_push_handler(
-			function ( WP_HTML_Token $token ): void {
-				$is_virtual            = ! isset( $this->state->current_token ) || $this->is_tag_closer();
-				$same_node             = isset( $this->state->current_token ) && $token->node_name === $this->state->current_token->node_name;
-				$provenance            = ( ! $same_node || $is_virtual ) ? 'virtual' : 'real';
-				$this->element_queue[] = new WP_HTML_Stack_Event( $token, WP_HTML_Stack_Event::PUSH, $provenance );
-			}
-		);
-
 		$this->state->stack_of_open_elements->set_pop_handler(
 			function ( WP_HTML_Token $token ): void {
 				$is_virtual            = ! isset( $this->state->current_token ) || ! $this->is_tag_closer();
@@ -1174,6 +1165,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		$this->bookmarks[] = new WP_HTML_Span( $currently_at->start, 0 );
 		$html_element      = new WP_HTML_Token( $new_bookmark, 'HTML', false );
 		$this->state->stack_of_open_elements->push( $html_element );
+		$this->element_queue[] = new WP_HTML_Stack_Event( $html_element, WP_HTML_Stack_Event::PUSH, 'virtual' );
 		$this->state->insertion_mode = WP_HTML_Processor_State::INSERTION_MODE_BEFORE_HEAD;
 		return $this->step( self::REPROCESS_CURRENT_NODE );
 	}
@@ -1275,6 +1267,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		$this->bookmarks[] = new WP_HTML_Span( $currently_at->start, 0 );
 		$head_element      = new WP_HTML_Token( $new_bookmark, 'HEAD', false );
 		$this->state->stack_of_open_elements->push( $head_element );
+		$this->element_queue[] = new WP_HTML_Stack_Event( $head_element, WP_HTML_Stack_Event::PUSH, 'virtual' );
 		$this->state->head_element   = $head_element;
 		$this->state->insertion_mode = WP_HTML_Processor_State::INSERTION_MODE_IN_HEAD;
 		return $this->step( self::REPROCESS_CURRENT_NODE );
@@ -1766,14 +1759,10 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 		 */
 		$currently_at      = $this->bookmarks[ $this->state->current_token->bookmark_name ];
 		$new_bookmark      = $this->bookmark_token();
-		$this->bookmarks[] = new WP_HTML_Span( $currently_at->start + $currently_at->length, 0 );
-		$this->state->stack_of_open_elements->push(
-			new WP_HTML_Token(
-				$new_bookmark,
-				'BODY',
-				false
-			)
-		);
+		$this->bookmarks[ $new_bookmark ] = new WP_HTML_Span( $currently_at->start + $currently_at->length, 0 );
+		$body_element = new WP_HTML_Token( $new_bookmark, 'BODY', false );
+		$this->state->stack_of_open_elements->push( $body_element );
+		$this->element_queue[] = new WP_HTML_Stack_Event( $body_element, WP_HTML_Stack_Event::PUSH, 'virtual' );
 		$this->state->insertion_mode = WP_HTML_Processor_State::INSERTION_MODE_IN_BODY;
 		return $this->step( self::REPROCESS_CURRENT_NODE );
 	}
@@ -2280,7 +2269,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			 */
 			case '-P':
 				if ( ! $this->state->stack_of_open_elements->has_p_in_button_scope() ) {
-					$this->insert_html_element( $this->state->current_token );
+					$this->insert_html_element( $this->state->current_token, 'virtual' );
 				}
 
 				$this->close_a_p_element();
@@ -4940,8 +4929,9 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 *
 	 * @param WP_HTML_Token $token Name of bookmark pointing to element in original input HTML.
 	 */
-	private function insert_html_element( WP_HTML_Token $token ): void {
+	private function insert_html_element( WP_HTML_Token $token, $provenance = 'real' ): void {
 		$this->state->stack_of_open_elements->push( $token );
+		$this->element_queue[] = new WP_HTML_Stack_Event( $token, WP_HTML_Stack_Event::PUSH, $provenance );
 	}
 
 	/**
@@ -4959,7 +4949,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 
 		$this->bookmarks[ $name ] = new WP_HTML_Span( $here->start, 0 );
 
-		$this->insert_html_element( new WP_HTML_Token( $name, $token_name, false ) );
+		$this->insert_html_element( new WP_HTML_Token( $name, $token_name, false ), 'virtual' );
 	}
 
 	/*

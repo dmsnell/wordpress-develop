@@ -63,17 +63,6 @@ class WP_HTML_Open_Elements {
 	private $pop_handler = null;
 
 	/**
-	 * A function that will be called when an item is pushed onto the stack of open elements.
-	 *
-	 * The function will be called with the pushed item as its argument.
-	 *
-	 * @since 6.6.0
-	 *
-	 * @var Closure|null
-	 */
-	private $push_handler = null;
-
-	/**
 	 * Sets a pop handler that will be called when an item is popped off the stack of
 	 * open elements.
 	 *
@@ -85,20 +74,6 @@ class WP_HTML_Open_Elements {
 	 */
 	public function set_pop_handler( Closure $handler ): void {
 		$this->pop_handler = $handler;
-	}
-
-	/**
-	 * Sets a push handler that will be called when an item is pushed onto the stack of
-	 * open elements.
-	 *
-	 * The function will be called with the pushed item as its argument.
-	 *
-	 * @since 6.6.0
-	 *
-	 * @param Closure $handler The handler function.
-	 */
-	public function set_push_handler( Closure $handler ): void {
-		$this->push_handler = $handler;
 	}
 
 	/**
@@ -713,10 +688,6 @@ class WP_HTML_Open_Elements {
 			case 'P':
 				$this->has_p_in_button_scope = true;
 				break;
-		}
-
-		if ( null !== $this->push_handler ) {
-			( $this->push_handler )( $item );
 		}
 	}
 
