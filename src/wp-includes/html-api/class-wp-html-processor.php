@@ -1296,53 +1296,61 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return bool Whether an element was found.
 	 */
 	private function step_in_head(): bool {
-		$token_name = $this->get_token_name();
-		$token_type = $this->get_token_type();
-		$is_closer  = parent::is_tag_closer();
-		$op_sigil   = '#tag' === $token_type ? ( $is_closer ? '-' : '+' ) : '';
-		$op         = "{$op_sigil}{$token_name}";
+		switch ( $this->parser_state ) {
+			case WP_HTML_Tag_Processor::STATE_TEXT_NODE:
+				/*
+				 * > A character token that is one of U+0009 CHARACTER TABULATION,
+				 * > U+000A LINE FEED (LF), U+000C FORM FEED (FF),
+				 * > U+000D CARRIAGE RETURN (CR), or U+0020 SPACE
+				 */
+				$here = $this->bookmarks[ $this->state->current_token->bookmark_name ];
 
-		/*
-		 * > A character token that is one of U+0009 CHARACTER TABULATION,
-		 * > U+000A LINE FEED (LF), U+000C FORM FEED (FF),
-		 * > U+000D CARRIAGE RETURN (CR), or U+0020 SPACE
-		 */
-		if ( '#text' === $op ) {
-			$text = $this->get_modifiable_text();
-			if ( '' === $text ) {
 				/*
 				 * If the text is empty after processing HTML entities and stripping
 				 * U+0000 NULL bytes then ignore the token.
 				 */
-				return $this->step();
-			}
+				if ( strspn( $this->html, "\x00", $here->start, $here->length ) === $here->length ) {
+					return $this->step();
+				}
 
-			if ( strlen( $text ) === strspn( $text, " \t\n\f\r" ) ) {
-				// Insert the character.
+				if (
+					strcspn( $this->html, '&', $here->start, $here->length ) === $here->length &&
+					strspn( $this->html, " \t\f\r\n", $here->start, $here->length ) === $here->length
+				) {
+					// Insert the character.
+					$this->insert_html_element( $this->state->current_token );
+					return true;
+				}
+
+				$text = $this->get_modifiable_text();
+				if ( strlen( $text ) === strspn( $text, " \t\n\f\r" ) ) {
+					// Insert the character.
+					$this->insert_html_element( $this->state->current_token );
+					return true;
+				}
+				break;
+
+			case WP_HTML_Tag_Processor::STATE_COMMENT:
+			case WP_HTML_Tag_Processor::STATE_FUNKY_COMMENT:
 				$this->insert_html_element( $this->state->current_token );
 				return true;
-			}
+
+			case WP_HTML_Tag_Processor::STATE_DOCTYPE:
+				return $this->step();
+
+			case WP_HTML_Tag_Processor::STATE_MATCHED_TAG:
+				break;
+
+			default:
+				goto in_head_anything_else;
 		}
 
-		$is_excluded_closing_tag = false;
+		$token_name = $this->get_token_name();
+		$is_closer  = parent::is_tag_closer();
+		$op_sigil   = $is_closer ? '-' : '+';
+		$op         = "{$op_sigil}{$token_name}";
 
 		switch ( $op ) {
-			/*
-			 * > A comment token
-			 */
-			case '#comment':
-			case '#funky-comment':
-			case '#presumptuous-tag':
-				$this->insert_html_element( $this->state->current_token );
-				return true;
-
-			/*
-			 * > A DOCTYPE token
-			 */
-			case 'html':
-				// Parse error: ignore the token.
-				return $this->step();
-
 			/*
 			 * > A start tag whose tag name is "html"
 			 */
@@ -1470,7 +1478,6 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			/*
 			 * > An end tag whose tag name is "template"
 			 */
-			case '+TEMPLATE':
 			case '-TEMPLATE':
 				if ( ! $this->state->stack_of_open_elements->contains( 'TEMPLATE' ) ) {
 					// @todo Indicate a parse error once it's possible.
