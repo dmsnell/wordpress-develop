@@ -496,17 +496,9 @@ class WP_HTML_Open_Elements {
 	 */
 	public function pop(): bool {
 		$item = array_pop( $this->stack );
-		if ( null === $item ) {
-			return false;
-		}
-
-		if ( 'context-node' === $item->bookmark_name ) {
-			$this->stack[] = $item;
-			return false;
-		}
 
 		$this->after_element_pop( $item );
-		return true;
+		return isset( $item );
 	}
 
 	/**
@@ -521,10 +513,6 @@ class WP_HTML_Open_Elements {
 	 */
 	public function pop_until( string $tag_name ): bool {
 		foreach ( $this->walk_up() as $item ) {
-			if ( 'context-node' === $item->bookmark_name ) {
-				return true;
-			}
-
 			$this->pop();
 
 			if (
@@ -565,12 +553,8 @@ class WP_HTML_Open_Elements {
 	 * @return bool Whether the node was found and removed from the stack of open elements.
 	 */
 	public function remove_node( WP_HTML_Token $token ): bool {
-		if ( 'context-node' === $token->bookmark_name ) {
-			return false;
-		}
-
 		foreach ( $this->walk_up() as $position_from_end => $item ) {
-			if ( $token->bookmark_name !== $item->bookmark_name ) {
+			if ( $token !== $item ) {
 				continue;
 			}
 
@@ -667,27 +651,27 @@ class WP_HTML_Open_Elements {
 	 * @param WP_HTML_Token $item Element that was added to the stack of open elements.
 	 */
 	public function after_element_push( WP_HTML_Token $item ): void {
-		/*
-		 * When adding support for new elements, expand this switch to trap
-		 * cases where the precalculated value needs to change.
-		 */
-		switch ( $item->node_name ) {
-			case 'APPLET':
-			case 'BUTTON':
-			case 'CAPTION':
-			case 'HTML':
-			case 'TABLE':
-			case 'TD':
-			case 'TH':
-			case 'MARQUEE':
-			case 'OBJECT':
-			case 'TEMPLATE':
-				$this->has_p_in_button_scope = false;
-				break;
-
-			case 'P':
-				$this->has_p_in_button_scope = true;
-				break;
+		if ( 'P' === $item->node_name ) {
+			$this->has_p_in_button_scope = true;
+		} elseif ( 1 === strspn( $item->node_name, 'ABCHMOT', 0, 1 ) ) {
+			/*
+			 * When adding support for new elements, expand this switch to trap
+			 * cases where the precalculated value needs to change.
+			 */
+			switch ( $item->node_name ) {
+				case 'APPLET':
+				case 'BUTTON':
+				case 'CAPTION':
+				case 'HTML':
+				case 'TABLE':
+				case 'TD':
+				case 'TH':
+				case 'MARQUEE':
+				case 'OBJECT':
+				case 'TEMPLATE':
+					$this->has_p_in_button_scope = false;
+					break;
+			}
 		}
 	}
 
@@ -704,12 +688,12 @@ class WP_HTML_Open_Elements {
 	 *
 	 * @param WP_HTML_Token $item Element that was removed from the stack of open elements.
 	 */
-	public function after_element_pop( WP_HTML_Token $item ): void {
+	public function after_element_pop( ?WP_HTML_Token $item ): void {
 		/*
 		 * When adding support for new elements, expand this switch to trap
 		 * cases where the precalculated value needs to change.
 		 */
-		switch ( $item->node_name ) {
+		switch ( $item->node_name ?? null ) {
 			case 'APPLET':
 			case 'BUTTON':
 			case 'CAPTION':
@@ -725,7 +709,7 @@ class WP_HTML_Open_Elements {
 				break;
 		}
 
-		if ( null !== $this->pop_handler ) {
+		if ( isset( $this->pop_handler, $item ) ) {
 			( $this->pop_handler )( $item );
 		}
 	}

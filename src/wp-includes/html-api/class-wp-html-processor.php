@@ -787,9 +787,6 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 */
 	public function expects_closer( $node = null ): ?bool {
 		$token_name = $node->node_name ?? $this->get_token_name();
-		if ( ! isset( $token_name ) ) {
-			return null;
-		}
 
 		return ! (
 			// Comments, text nodes, and other atomic tokens.
@@ -797,7 +794,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			// Doctype declarations.
 			'html' === $token_name ||
 			// Void elements.
-			self::is_void( $token_name ) ||
+			self::is_void_raw( $token_name ) ||
 			// Special atomic elements.
 			in_array( $token_name, array( 'IFRAME', 'NOEMBED', 'NOFRAMES', 'SCRIPT', 'STYLE', 'TEXTAREA', 'TITLE', 'XMP' ), true )
 		);
@@ -5085,8 +5082,22 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return bool Whether the given tag is an HTML Void Element.
 	 */
 	public static function is_void( $tag_name ): bool {
-		$tag_name = strtoupper( $tag_name );
+		return static::is_void_raw( strtoupper( $tag_name ) );
+	}
 
+	/**
+	 * Returns whether a given element is an HTML Void Element
+	 *
+	 * > area, base, br, col, embed, hr, img, input, link, meta, source, track, wbr
+	 *
+	 * @since 6.4.0
+	 *
+	 * @see https://html.spec.whatwg.org/#void-elements
+	 *
+	 * @param string $tag_name Name of HTML tag to check.
+	 * @return bool Whether the given tag is an HTML Void Element.
+	 */
+	public static function is_void_raw( $tag_name ): bool {
 		return (
 			'AREA' === $tag_name ||
 			'BASE' === $tag_name ||
