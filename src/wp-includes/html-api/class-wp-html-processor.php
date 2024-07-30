@@ -1342,7 +1342,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 				goto in_head_anything_else;
 		}
 
-		$token_name = $this->get_token_name();
+		$token_name = $this->get_tag();
 		$is_closer  = parent::is_tag_closer();
 		$op_sigil   = $is_closer ? '-' : '+';
 		$op         = "{$op_sigil}{$token_name}";
