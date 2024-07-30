@@ -954,14 +954,9 @@ class WP_HTML_Tag_Processor {
 		 *  - TITLE
 		 *  - XMP (deprecated)
 		 */
-		if (
-			$this->is_closing_tag ||
-			1 !== strspn( $this->html, 'iIlLnNpPsStTxX', $this->tag_name_starts_at, 1 )
-		) {
+		if ( $this->is_closing_tag ) {
 			return true;
 		}
-
-		$tag_name = $this->get_tag();
 
 		/*
 		 * For LISTING, PRE, and TEXTAREA, the first linefeed of an immediately-following
@@ -969,7 +964,10 @@ class WP_HTML_Tag_Processor {
 		 *
 		 * @see static::skip_newline_at
 		 */
-		if ( 'LISTING' === $tag_name || 'PRE' === $tag_name ) {
+		if (
+			( 7 === $this->tag_name_length && 0 === substr_compare( $this->html, 'LISTING', $this->tag_name_starts_at, $this->tag_name_length, true ) ) ||
+			( 3 === $this->tag_name_length && 0 === substr_compare( $this->html, 'PRE', $this->tag_name_starts_at, $this->tag_name_length , true) )
+		) {
 			$this->skip_newline_at = $this->bytes_already_parsed;
 			return true;
 		}
@@ -996,17 +994,23 @@ class WP_HTML_Tag_Processor {
 		$duplicate_attributes = $this->duplicate_attributes;
 
 		// Find the closing tag if necessary.
-		$found_closer = false;
-		switch ( $tag_name ) {
-			case 'SCRIPT':
-				$found_closer = $this->skip_script_data();
-				break;
-
-			case 'TEXTAREA':
-			case 'TITLE':
-				$found_closer = $this->skip_rcdata( $tag_name );
-				break;
-
+		if (
+			6 === $tag_name_length &&
+			0 === substr_compare( $this->html, 'SCRIPT', $tag_name_starts_at, $tag_name_length, true )
+		) {
+			$found_closer = $this->skip_script_data();
+		} elseif (
+			( 8 === $tag_name_length && 0 === substr_compare( $this->html, 'TEXTAREA', $tag_name_starts_at, $tag_name_length, true ) ) ||
+			( 5 === $tag_name_length && 0 === substr_compare( $this->html, 'TITLE', $tag_name_starts_at, $tag_name_length, true ) )
+		) {
+			$found_closer = $this->skip_rcdata( strtoupper( substr( $this->html, $tag_name_starts_at, $tag_name_length ) ) );
+		} elseif (
+			( 6 === $tag_name_length && 0 === substr_compare( $this->html, 'IFRAME', $tag_name_starts_at, $tag_name_length, true ) ) ||
+			( 7 === $tag_name_length && 0 === substr_compare( $this->html, 'NOEMBED', $tag_name_starts_at, $tag_name_length, true ) ) ||
+			( 8 === $tag_name_length && 0 === substr_compare( $this->html, 'NOFRAMES', $tag_name_starts_at, $tag_name_length, true ) ) ||
+			( 5 === $tag_name_length && 0 === substr_compare( $this->html, 'STYLE', $tag_name_starts_at, $tag_name_length, true ) ) ||
+			( 3 === $tag_name_length && 0 === substr_compare( $this->html, 'XMP', $tag_name_starts_at, $tag_name_length, true ) )
+		) {
 			/*
 			 * In the browser this list would include the NOSCRIPT element,
 			 * but the Tag Processor is an environment with the scripting
@@ -1018,17 +1022,10 @@ class WP_HTML_Tag_Processor {
 			 * because the parsing of this token depends on client application.
 			 * The NOSCRIPT element cannot be represented in the XHTML syntax.
 			 */
-			case 'IFRAME':
-			case 'NOEMBED':
-			case 'NOFRAMES':
-			case 'STYLE':
-			case 'XMP':
-				$found_closer = $this->skip_rawtext( $tag_name );
-				break;
-
+			$found_closer = $this->skip_rawtext( strtoupper( substr( $this->html, $this->tag_name_starts_at, $this->tag_name_length ) ) );
+		} else {
 			// No other tags should be treated in their entirety here.
-			default:
-				return true;
+			return true;
 		}
 
 		if ( ! $found_closer ) {

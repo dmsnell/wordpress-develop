@@ -256,6 +256,8 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 */
 	private $context_node = null;
 
+	private $is_virtual_node = false;
+
 	/**
 	 * Whether the parser has yet processed the context node,
 	 * if created as a fragment parser.
@@ -666,6 +668,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			return $this->next_token();
 		}
 
+		$this->is_virtual_node = 'virtual' === ( $this->current_element->provenance ?? null );
 		return true;
 	}
 
@@ -686,7 +689,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return bool Whether the current tag is a tag closer.
 	 */
 	public function is_tag_closer(): bool {
-		return $this->is_virtual()
+		return $this->is_virtual_node
 			? ( WP_HTML_Stack_Event::POP === $this->current_element->operation && '#tag' === $this->get_token_type() )
 			: parent::is_tag_closer();
 	}
@@ -835,13 +838,14 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			 *        is provided in the opening tag, otherwise it expects a tag closer.
 			 */
 			$top_node = $this->state->stack_of_open_elements->current_node();
-			if ( isset( $top_node ) && ! static::expects_closer( $top_node ) ) {
+			if ( isset( $top_node ) && ! $this->expects_closer( $top_node ) ) {
 				$this->state->stack_of_open_elements->pop();
 			}
 		}
 
 		if ( self::PROCESS_NEXT_NODE === $node_to_process ) {
 			parent::next_token();
+			$this->is_virtual_node = false;
 		}
 
 		// Finish stepping when there are no more tokens in the document.
@@ -3947,7 +3951,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			return null;
 		}
 
-		if ( $this->is_virtual() ) {
+		if ( $this->is_virtual_node ) {
 			return $this->current_element->token->node_name;
 		}
 
@@ -3984,7 +3988,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return bool Whether the currently matched tag contains the self-closing flag.
 	 */
 	public function has_self_closing_flag(): bool {
-		return $this->is_virtual() ? false : parent::has_self_closing_flag();
+		return $this->is_virtual_node ? false : parent::has_self_closing_flag();
 	}
 
 	/**
@@ -4008,7 +4012,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return string|null Name of the matched token.
 	 */
 	public function get_token_name(): ?string {
-		return $this->is_virtual()
+		return $this->is_virtual_node
 			? $this->current_element->token->node_name
 			: parent::get_token_name();
 	}
@@ -4036,7 +4040,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return string|null What kind of token is matched, or null.
 	 */
 	public function get_token_type(): ?string {
-		if ( $this->is_virtual() ) {
+		if ( $this->is_virtual_node ) {
 			/*
 			 * This logic comes from the Tag Processor.
 			 *
@@ -4079,7 +4083,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return string|true|null Value of attribute or `null` if not available. Boolean attributes return `true`.
 	 */
 	public function get_attribute( $name ) {
-		return $this->is_virtual() ? null : parent::get_attribute( $name );
+		return $this->is_virtual_node ? null : parent::get_attribute( $name );
 	}
 
 	/**
@@ -4098,7 +4102,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return bool Whether an attribute value was set.
 	 */
 	public function set_attribute( $name, $value ): bool {
-		return $this->is_virtual() ? false : parent::set_attribute( $name, $value );
+		return $this->is_virtual_node ? false : parent::set_attribute( $name, $value );
 	}
 
 	/**
@@ -4110,7 +4114,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return bool Whether an attribute was removed.
 	 */
 	public function remove_attribute( $name ): bool {
-		return $this->is_virtual() ? false : parent::remove_attribute( $name );
+		return $this->is_virtual_node ? false : parent::remove_attribute( $name );
 	}
 
 	/**
@@ -4140,7 +4144,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return array|null List of attribute names, or `null` when no tag opener is matched.
 	 */
 	public function get_attribute_names_with_prefix( $prefix ): ?array {
-		return $this->is_virtual() ? null : parent::get_attribute_names_with_prefix( $prefix );
+		return $this->is_virtual_node ? null : parent::get_attribute_names_with_prefix( $prefix );
 	}
 
 	/**
@@ -4152,7 +4156,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return bool Whether the class was set to be added.
 	 */
 	public function add_class( $class_name ): bool {
-		return $this->is_virtual() ? false : parent::add_class( $class_name );
+		return $this->is_virtual_node ? false : parent::add_class( $class_name );
 	}
 
 	/**
@@ -4164,7 +4168,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return bool Whether the class was set to be removed.
 	 */
 	public function remove_class( $class_name ): bool {
-		return $this->is_virtual() ? false : parent::remove_class( $class_name );
+		return $this->is_virtual_node ? false : parent::remove_class( $class_name );
 	}
 
 	/**
@@ -4176,7 +4180,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return bool|null Whether the matched tag contains the given class name, or null if not matched.
 	 */
 	public function has_class( $wanted_class ): ?bool {
-		return $this->is_virtual() ? null : parent::has_class( $wanted_class );
+		return $this->is_virtual_node ? null : parent::has_class( $wanted_class );
 	}
 
 	/**
@@ -4196,7 +4200,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @since 6.6.0 Subclassed for the HTML Processor.
 	 */
 	public function class_list() {
-		return $this->is_virtual() ? null : parent::class_list();
+		return $this->is_virtual_node ? null : parent::class_list();
 	}
 
 	/**
@@ -4220,7 +4224,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return string
 	 */
 	public function get_modifiable_text(): string {
-		return $this->is_virtual() ? '' : parent::get_modifiable_text();
+		return $this->is_virtual_node ? '' : parent::get_modifiable_text();
 	}
 
 	/**
@@ -4243,7 +4247,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 * @return string|null
 	 */
 	public function get_comment_type(): ?string {
-		return $this->is_virtual() ? null : parent::get_comment_type();
+		return $this->is_virtual_node ? null : parent::get_comment_type();
 	}
 
 	/**
@@ -4287,6 +4291,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			? $this->bookmarks[ $this->state->current_token->bookmark_name ]->start
 			: 0;
 		$bookmark_starts_at   = $this->bookmarks[ $actual_bookmark_name ]->start;
+		$bookmark_length      = $this->bookmarks[ $actual_bookmark_name ]->length;
 		$direction            = $bookmark_starts_at > $processor_started_at ? 'forward' : 'backward';
 
 		/*
@@ -4352,16 +4357,14 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			}
 		}
 
-		// When moving forwards, reparse the document until reaching the same location as the original bookmark.
-		if ( $bookmark_starts_at === $this->bookmarks[ $this->state->current_token->bookmark_name ]->start ) {
-			return true;
-		}
-
 		while ( $this->next_token() ) {
-			if ( $bookmark_starts_at === $this->bookmarks[ $this->state->current_token->bookmark_name ]->start ) {
-				while ( isset( $this->current_element ) && WP_HTML_Stack_Event::POP === $this->current_element->operation ) {
-					$this->current_element = array_shift( $this->element_queue );
-				}
+			$here = $this->bookmarks[ $this->state->current_token->bookmark_name ];
+
+			if (
+				$here->start === $bookmark_starts_at &&
+				$here->length === $bookmark_length &&
+				WP_HTML_Stack_Event::POP !== $this->current_element->operation
+			) {
 				return true;
 			}
 		}
