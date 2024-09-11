@@ -1061,14 +1061,25 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 *     echo WP_HTML_Processor::normalize( '<![CDATA[invalid comment]]> syntax < <> "oddities"' );
 	 *     // <!--[CDATA[invalid comment]]--> syntax &lt; &lt;&gt; &quot;oddities&quot;
 	 *
+	 * @see static::serialize
+	 *
 	 * @since 6.7.0
 	 *
-	 * @param string $html Input HTML to normalize.
-	 *
+	 * @param string       $html              Input HTML to normalize.
+	 * @param array[]|null $allowed_html      Optional. An array of allowed HTML and attributes,
+	 *                                        where each array key is an element name and each value
+	 *                                        is either an array specifying allowed attribute names
+	 *                                        and whether they are required, or `'remove-node'` to
+	 *                                        skip the entire node and its contents.
+	 *                                        For non-HTML elements, prefix the namespace followed by
+	 *                                        a space for the tag name.
+	 *                                        Defaults to allow all tags.
+	 * @param array|null   $allowed_protocols Optional. Array of allowable URL protocols.
+	 *                                        Defaults to allowing all URLs.
 	 * @return string|null Normalized output, or `null` if unable to normalize.
 	 */
-	public static function normalize( string $html ): ?string {
-		return static::create_fragment( $html )->serialize();
+	public static function normalize( string $html, array $allowed_html = null, array $allowed_protocols = null ): ?string {
+		return static::create_fragment( $html )->serialize( $allowed_html, $allowed_protocols );
 	}
 
 	/**
@@ -1107,10 +1118,20 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	 *
 	 * @since 6.7.0
 	 *
+	 * @param array[]|null $allowed_html       Optional. An array of allowed HTML and attributes,
+	 *                                         where each array key is an element name and each value
+	 *                                         is either an array specifying allowed attribute names
+	 *                                         and whether they are required, or `'remove-node'` to
+	 *                                         skip the entire node and its contents.
+	 *                                         For non-HTML elements, prefix the namespace followed by
+	 *                                         a space for the tag name.
+	 *                                         Defaults to allow all tags.
+	 * @param array|null   $allowed_protocols  Optional. Array of allowable URL protocols.
+	 *                                         Defaults to allowing all URLs.
 	 * @return string|null Normalized HTML markup represented by processor,
 	 *                     or `null` if unable to generate serialization.
 	 */
-	public function serialize(): ?string {
+	public function serialize( array $allowed_html = null, array $allowed_protocols = null ): ?string {
 		if ( WP_HTML_Tag_Processor::STATE_READY !== $this->parser_state ) {
 			wp_trigger_error(
 				__METHOD__,
@@ -1120,13 +1141,55 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			return null;
 		}
 
+		$allowed_tags        = array();
+		$removed_tags        = array();
+		$required_attributes = array();
+		$skip_closers        = array();
+		if ( is_array( $allowed_html ) ) {
+			foreach ( $allowed_html as $tag_name => $attributes ) {
+				if ( 0 === strlen( $tag_name ) ) {
+					continue;
+				}
+
+				$tag_name = '#' === $tag_name[0] ? $tag_name : strtoupper( $tag_name );
+
+				if ( 'remove-node' === $attributes ) {
+					$removed_tags[] = $tag_name;
+					continue;
+				}
+
+				if ( isset( $allowed_tags[ $tag_name ] ) ) {
+					_doing_it_wrong(
+						__METHOD__,
+						'Only pass a single entry for each allowable tag name.',
+						'6.7.0'
+					);
+					continue;
+				}
+
+				$allowed_tags[ $tag_name ]        = array();
+				$required_attributes[ $tag_name ] = array();
+
+				foreach ( $attributes as $attribute_name => $specifier ) {
+					$attribute_name                               = strtolower( $attribute_name );
+					$allowed_tags[ $tag_name ][ $attribute_name ] = $specifier;
+
+					if ( isset( $specifier['required'] ) ) {
+						$required_attributes[ $tag_name ][] = $attribute_name;
+					}
+				}
+			}
+		}
+
 		$html = '';
 		while ( $this->next_token() ) {
 			$token_type = $this->get_token_type();
 
 			switch ( $token_type ) {
 				case '#text':
-					$html .= htmlspecialchars( $this->get_modifiable_text(), ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8' );
+					if ( ! in_array( '#text', $removed_tags, true ) ) {
+						$html .= htmlspecialchars( $this->get_modifiable_text(), ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8' );
+					}
 					break;
 
 				// Unlike the `<>` which is interpreted as plaintext, this is ignored entirely.
@@ -1134,10 +1197,16 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 					break;
 
 				case '#funky-comment':
-					$html .= "<!--{$this->get_modifiable_text()}-->";
+					if ( ! in_array( '#funky-comment', $removed_tags, true ) ) {
+						$html .= "<!--{$this->get_modifiable_text()}-->";
+					}
 					break;
 
 				case '#comment':
+					if ( in_array( '#comment', $removed_tags, true ) ) {
+						break;
+					}
+
 					switch ( $this->get_comment_type() ) {
 						case WP_HTML_Tag_Processor::COMMENT_AS_CDATA_LOOKALIKE:
 							$html .= "<!--[CDATA[{$this->get_modifiable_text()}]]-->";
@@ -1153,11 +1222,19 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 					break;
 
 				case '#cdata-section':
-					$html .= "<![CDATA[{$this->get_modifiable_text()}]]>";
+					if ( ! in_array( '#cdata-section', $removed_tags, true ) ) {
+						$html .= "<![CDATA[{$this->get_modifiable_text()}]]>";
+					}
 					break;
 
-				case 'html':
-					$html .= '<!DOCTYPE html>';
+				case '#doctype':
+					if ( ! in_array( '#doctype', $removed_tags, true ) ) {
+						if ( WP_HTML_Tag_Processor::NO_QUIRKS_MODE === $this->compat_mode ) {
+							$html .= '<!DOCTYPE html>';
+						} else {
+							$html .= '<!DOCTYPE html PUBLIC="-//W3C//DTD W3 HTML//Quirks Mode//">';
+						}
+					}
 					break;
 			}
 
@@ -1166,28 +1243,123 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			}
 
 			$tag_name       = $this->get_tag();
-			$in_html        = 'html' === $this->get_namespace();
+			$namespace      = $this->get_namespace();
+			$in_html        = 'html' === $namespace;
 			$qualified_name = $in_html ? strtolower( $tag_name ) : $this->get_qualified_tag_name();
+			$allowable_name = $in_html ? $tag_name : ( strtoupper( $namespace ) . " ${tag_name}" );
 
-			if ( $this->is_tag_closer() ) {
-				$html .= "</{$qualified_name}>";
+			// Remove subtree for tags marked as `remove-node`.
+			if ( in_array( $allowable_name, $removed_tags, true ) ) {
+				$this_depth = $this->get_current_depth();
+				while ( $this->get_current_depth() >= $this_depth && $this->next_token() ) {
+					continue;
+				}
 				continue;
 			}
 
-			$attribute_names = $this->get_attribute_names_with_prefix( '' );
-			if ( ! isset( $attribute_names ) ) {
-				$html .= "<{$qualified_name}>";
+			// Skip tags which aren't allowed: this covers opening _and_ closing tags.
+			if ( isset( $allowed_html ) && ! isset( $allowed_tags[ $allowable_name ] ) ) {
 				continue;
+			}
+
+			// Skip tags lacking a required attribute.
+			foreach ( $required_attributes[ $allowable_name ] ?? array() as $required_name ) {
+				if ( null === $this->get_attribute( $required_name ) ) {
+					$skip_closers[] = array( $allowable_name, $this->get_current_depth() );
+					continue 2;
+				}
+			}
+
+			if ( $this->is_tag_closer() ) {
+				list( $skippable_name, $skippable_depth ) = end( $skip_closers ) ?? array( null, null );
+				if ( $skippable_name === $allowable_name && $skippable_depth === $this->get_current_depth() ) {
+					array_pop( $skip_closers );
+				} else {
+					$html .= "</{$qualified_name}>";
+				}
+				continue;
+			}
+
+			if ( isset( $allowed_html ) ) {
+				$attribute_names = array_keys( $allowed_tags[ $allowable_name ] );
+			} else {
+				$attribute_names = $this->get_attribute_names_with_prefix( '' ) ?? array();
+			}
+
+			/*
+			 * Since this iterates the allowed list, if provided, there's no need to
+			 * check if a given attribute is in the allowed list. Without an allowed
+			 * list all the constraints will fail to apply by not being present.
+			 */
+			$allowable_attributes = $allowed_tags[ $allowable_name ] ?? array();
+			$attribute_string     = '';
+			foreach ( $attribute_names as $attribute_name ) {
+				$value     = $this->get_attribute( $attribute_name );
+				$specifier = $allowable_attributes[ $attribute_name ] ?? array();
+
+				// Handle the attribute specifiers.
+				if ( isset( $specifier['valueless'] ) && ( 'y' === $specifier['valueless'] || 'Y' === $specifier['valueless'] ) ) {
+					$attribute_string .= " {$this->get_qualified_attribute_name( $attribute_name )}";
+					continue;
+				}
+
+				if (
+					isset( $specifier['valueless'] ) &&
+					( 'n' === $specifier['valueless'] || 'N' === $specifier['valueless'] ) &&
+					true === $value
+				) {
+					continue;
+				}
+
+				if (
+					isset( $specifier['values'] ) &&
+					! in_array( strtolower( $value ), $specifier['values'], true )
+				) {
+					continue;
+				}
+
+				if (
+					isset( $specifier['value_callback'] ) &&
+					! call_user_func( $allowable_attributes[ $attribute_name ]['value_callback'], $value )
+				) {
+					continue;
+				}
+
+				// All remaining specifiers apply to string values, not to boolean attributes.
+				if ( ! is_string( $value ) ) {
+					$attribute_string .= " {$this->get_qualified_attribute_name( $attribute_name )}";
+					continue;
+				}
+
+				if ( isset( $specifier['maxlen'] ) && strlen( $value ) > $specifier['maxlen'] ) {
+					continue;
+				}
+
+				if ( isset( $specifier['minlen'] ) && strlen( $value ) < $specifier['minlen'] ) {
+					continue;
+				}
+
+				if ( isset( $specifier['maxval'] ) || isset( $specifier['minval'] ) ) {
+					if ( ! preg_match( '/^\s{0,6}[0-9]{1,6}\s{0,6}$/', $value ) ) {
+						continue;
+					}
+
+					if (
+						( isset( $specifier['maxval'] ) && $value > $specifier['maxval'] ) ||
+						( isset( $specifier['minval'] ) && $value < $specifier['minval'] )
+					) {
+						continue;
+					}
+				}
+
+				$attribute_string .= " {$this->get_qualified_attribute_name( $attribute_name )}";
+				$attribute_string .= '="' . htmlspecialchars( $value, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5 ) . '"';
 			}
 
 			$html .= "<{$qualified_name}";
-			foreach ( $attribute_names as $attribute_name ) {
-				$html .= " {$this->get_qualified_attribute_name( $attribute_name )}";
-				$value = $this->get_attribute( $attribute_name );
 
-				if ( is_string( $value ) ) {
-					$html .= '="' . htmlspecialchars( $value, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5 ) . '"';
-				}
+			if ( '' !== $attribute_string ) {
+				$html .= $attribute_string;
 			}
 
 			if ( ! $in_html && $this->has_self_closing_flag() ) {
