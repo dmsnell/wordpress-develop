@@ -21,6 +21,8 @@
  * @group html-api-html5lib-tests
  */
 class Tests_HtmlApi_Html5lib extends WP_UnitTestCase {
+	const TREE_INDENT = '  ';
+
 	/**
 	 * Skip specific tests that may not be supported or have known issues.
 	 */
@@ -139,10 +141,6 @@ class Tests_HtmlApi_Html5lib extends WP_UnitTestCase {
 	 * @return bool True if the test case should be skipped. False otherwise.
 	 */
 	private static function should_skip_test( ?string $test_context_element, string $test_name ): bool {
-		if ( null !== $test_context_element && 'body' !== $test_context_element ) {
-			return true;
-		}
-
 		if ( array_key_exists( $test_name, self::SKIP_TESTS ) ) {
 			return true;
 		}
@@ -158,11 +156,77 @@ class Tests_HtmlApi_Html5lib extends WP_UnitTestCase {
 	 * @return string|null Tree structure of parsed HTML, if supported, else null.
 	 */
 	private static function build_tree_representation( ?string $fragment_context, string $html ) {
-		$processor = $fragment_context
-			? WP_HTML_Processor::create_fragment( $html, "<{$fragment_context}>" )
-			: WP_HTML_Processor::create_full_parser( $html );
-		if ( null === $processor ) {
-			throw new WP_HTML_Unsupported_Exception( "Could not create a parser with the given fragment context: {$fragment_context}.", '', 0, '', array(), array() );
+		$processor = null;
+		if ( $fragment_context ) {
+			if ( 'body' === $fragment_context ) {
+				$processor = WP_HTML_Processor::create_fragment( $html );
+			} else {
+
+				/*
+				 * If the string of characters starts with "svg ", the context
+				 * element is in the SVG namespace and the substring after
+				 * "svg " is the local name. If the string of characters starts
+				 * with "math ", the context element is in the MathML namespace
+				 * and the substring after "math " is the local name.
+				 * Otherwise, the context element is in the HTML namespace and
+				 * the string is the local name.
+				 */
+				if ( str_starts_with( $fragment_context, 'svg ' ) ) {
+					$tag_name = substr( $fragment_context, 4 );
+					if ( 'svg' === $tag_name ) {
+						$parent_processor = WP_HTML_Processor::create_full_parser( '<!DOCTYPE html><svg>' );
+					} else {
+						$parent_processor = WP_HTML_Processor::create_full_parser( "<!DOCTYPE html><svg><{$tag_name}>" );
+					}
+					$parent_processor->next_tag( $tag_name );
+				} elseif ( str_starts_with( $fragment_context, 'math ' ) ) {
+					$tag_name = substr( $fragment_context, 5 );
+					if ( 'math' === $tag_name ) {
+						$parent_processor = WP_HTML_Processor::create_full_parser( '<!DOCTYPE html><math>' );
+					} else {
+						$parent_processor = WP_HTML_Processor::create_full_parser( "<!DOCTYPE html><math><{$tag_name}>" );
+					}
+					$parent_processor->next_tag( $tag_name );
+				} else {
+					if ( in_array(
+						$fragment_context,
+						array(
+							'caption',
+							'col',
+							'colgroup',
+							'tbody',
+							'td',
+							'tfoot',
+							'th',
+							'thead',
+							'tr',
+						),
+						true
+					) ) {
+						$parent_processor = WP_HTML_Processor::create_full_parser( "<!DOCTYPE html><table><{$fragment_context}>" );
+						$parent_processor->next_tag();
+					} else {
+						$parent_processor = WP_HTML_Processor::create_full_parser( "<!DOCTYPE html><{$fragment_context}>" );
+					}
+					$parent_processor->next_tag( $fragment_context );
+				}
+				if ( null !== $parent_processor->get_unsupported_exception() ) {
+					throw $parent_processor->get_unsupported_exception();
+				}
+				if ( null !== $parent_processor->get_last_error() ) {
+					throw new Exception( $parent_processor->get_last_error() );
+				}
+				$processor = $parent_processor->spawn_fragment_parser( $html );
+			}
+
+			if ( null === $processor ) {
+				throw new WP_HTML_Unsupported_Exception( "Could not create a parser with the given fragment context: {$fragment_context}.", '', 0, '', array(), array() );
+			}
+		} else {
+			$processor = WP_HTML_Processor::create_full_parser( $html );
+			if ( null === $processor ) {
+				throw new Exception( 'Could not create a full parser.' );
+			}
 		}
 
 		/*
@@ -170,9 +234,8 @@ class Tests_HtmlApi_Html5lib extends WP_UnitTestCase {
 		 * and requires adjustment to initial parameters.
 		 * The full parser will not.
 		 */
-		$output       = $fragment_context ? "<html>\n  <head>\n  <body>\n" : '';
-		$indent_level = $fragment_context ? 2 : 0;
-		$indent       = '  ';
+		$output       = '';
+		$indent_level = 0;
 		$was_text     = null;
 		$text_node    = '';
 
@@ -225,7 +288,7 @@ class Tests_HtmlApi_Html5lib extends WP_UnitTestCase {
 						++$indent_level;
 					}
 
-					$output .= str_repeat( $indent, $tag_indent ) . "<{$tag_name}>\n";
+					$output .= str_repeat( self::TREE_INDENT, $tag_indent ) . "<{$tag_name}>\n";
 
 					$attribute_names = $processor->get_attribute_names_with_prefix( '' );
 					if ( $attribute_names ) {
@@ -278,18 +341,18 @@ class Tests_HtmlApi_Html5lib extends WP_UnitTestCase {
 							if ( true === $val ) {
 								$val = '';
 							}
-							$output .= str_repeat( $indent, $tag_indent + 1 ) . "{$display_name}=\"{$val}\"\n";
+							$output .= str_repeat( self::TREE_INDENT, $tag_indent + 1 ) . "{$display_name}=\"{$val}\"\n";
 						}
 					}
 
 					// Self-contained tags contain their inner contents as modifiable text.
 					$modifiable_text = $processor->get_modifiable_text();
 					if ( '' !== $modifiable_text ) {
-						$output .= str_repeat( $indent, $tag_indent + 1 ) . "\"{$modifiable_text}\"\n";
+						$output .= str_repeat( self::TREE_INDENT, $tag_indent + 1 ) . "\"{$modifiable_text}\"\n";
 					}
 
 					if ( 'html' === $namespace && 'TEMPLATE' === $token_name ) {
-						$output .= str_repeat( $indent, $indent_level ) . "content\n";
+						$output .= str_repeat( self::TREE_INDENT, $indent_level ) . "content\n";
 						++$indent_level;
 					}
 
@@ -303,14 +366,14 @@ class Tests_HtmlApi_Html5lib extends WP_UnitTestCase {
 					}
 					$was_text = true;
 					if ( '' === $text_node ) {
-						$text_node .= str_repeat( $indent, $indent_level ) . '"';
+						$text_node .= str_repeat( self::TREE_INDENT, $indent_level ) . '"';
 					}
 					$text_node .= $text_content;
 					break;
 
 				case '#funky-comment':
 					// Comments must be "<" then "!-- " then the data then " -->".
-					$output .= str_repeat( $indent, $indent_level ) . "<!-- {$processor->get_modifiable_text()} -->\n";
+					$output .= str_repeat( self::TREE_INDENT, $indent_level ) . "<!-- {$processor->get_modifiable_text()} -->\n";
 					break;
 
 				case '#comment':
@@ -333,7 +396,7 @@ class Tests_HtmlApi_Html5lib extends WP_UnitTestCase {
 							throw new Error( "Unhandled comment type for tree construction: {$processor->get_comment_type()}" );
 					}
 					// Comments must be "<" then "!-- " then the data then " -->".
-					$output .= str_repeat( $indent, $indent_level ) . "<!-- {$comment_text_content} -->\n";
+					$output .= str_repeat( self::TREE_INDENT, $indent_level ) . "<!-- {$comment_text_content} -->\n";
 					break;
 
 				default:
@@ -449,7 +512,7 @@ class Tests_HtmlApi_Html5lib extends WP_UnitTestCase {
 				 * context element as context.
 				 */
 				case 'document-fragment':
-					$test_context_element = explode( ' ', $line )[0];
+					$test_context_element = trim( $line );
 					break;
 
 				/*

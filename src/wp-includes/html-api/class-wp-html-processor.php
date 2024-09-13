@@ -423,6 +423,61 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 	}
 
 	/**
+	 * Creates a fragment processor with the current node as its context element.
+	 *
+	 * @see https://html.spec.whatwg.org/multipage/parsing.html#html-fragment-parsing-algorithm
+	 *
+	 * @param string $html     Input HTML fragment to process.
+	 * @return static|null     The created processor if successful, otherwise null.
+	 */
+	public function spawn_fragment_parser( string $html ): ?self {
+		if ( $this->get_token_type() !== '#tag' ) {
+			return null;
+		}
+
+		$namespace = $this->get_namespace();
+
+		/*
+		 * Prevent creating fragments at "self-contained" nodes.
+		 *
+		 * @see https://github.com/WordPress/wordpress-develop/pull/7141
+		 * @see https://github.com/WordPress/wordpress-develop/pull/7198
+		 */
+		if (
+			'html' === $namespace &&
+			in_array( $this->get_tag(), array( 'IFRAME', 'NOEMBED', 'NOFRAMES', 'SCRIPT', 'STYLE', 'TEXTAREA', 'TITLE', 'XMP' ), true )
+		) {
+			return null;
+		}
+
+		$fragment_processor              = self::create_fragment( $html );
+		$fragment_processor->compat_mode = $this->compat_mode;
+
+		$fragment_processor->context_node                = clone $this->state->current_token;
+		$fragment_processor->context_node->bookmark_name = 'context-node';
+		$fragment_processor->context_node->on_destroy    = null;
+
+		$context_element = array( $fragment_processor->context_node->node_name, array() );
+		foreach ( $this->get_attribute_names_with_prefix( '' ) as $name => $value ) {
+			$context_element[1][ $name ] = $value;
+		}
+
+		$fragment_processor->breadcrumbs = array();
+
+		if ( 'TEMPLATE' === $context_element[0] ) {
+			$fragment_processor->state->stack_of_template_insertion_modes[] = WP_HTML_Processor_State::INSERTION_MODE_IN_TEMPLATE;
+		}
+
+		$fragment_processor->reset_insertion_mode_appropriately();
+
+		// @todo Set the parser's form element pointer.
+
+		$fragment_processor->state->encoding_confidence = 'irrelevant';
+
+		return $fragment_processor;
+	}
+
+	/**
 	 * Stops the parser and terminates its execution when encountering unsupported markup.
 	 *
 	 * @throws WP_HTML_Unsupported_Exception Halts execution of the parser.
@@ -4501,7 +4556,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 
 					$this->state->stack_of_open_elements->pop();
 				}
-				return $this->step( self::REPROCESS_CURRENT_NODE );
+				goto in_foreign_content_process_in_current_insertion_mode;
 		}
 
 		/*
@@ -4577,6 +4632,7 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 				goto in_foreign_content_end_tag_loop;
 			}
 
+			in_foreign_content_process_in_current_insertion_mode:
 			switch ( $this->state->insertion_mode ) {
 				case WP_HTML_Processor_State::INSERTION_MODE_INITIAL:
 					return $this->step_initial();
