@@ -1498,9 +1498,7 @@ class WP_HTML_Tag_Processor {
 		$at         = $this->bytes_already_parsed;
 
 		while ( false !== $at && $at < $doc_length ) {
-			if ( 1 === preg_match( '/[^-<]+/AS', $html, $continue_match, 0, $at ) ) {
-				$at += strlen( $continue_match[0] );
-			}
+			$at += strcspn( $html, '-<', $at );
 
 			/*
 			 * For all script states a "-->"  transitions
@@ -1711,14 +1709,12 @@ class WP_HTML_Tag_Processor {
 			 * * https://html.spec.whatwg.org/multipage/parsing.html#data-state
 			 * * https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
 			 */
-			$tag_name_prefix_length = $at + 1 < $doc_length && ctype_alpha( $html[ $at + 1 ] ) ? 1 : 0;
+			$tag_name_prefix_length = strspn( $html, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', $at + 1 );
 			if ( $tag_name_prefix_length > 0 ) {
 				++$at;
 				$this->parser_state         = self::STATE_MATCHED_TAG;
 				$this->tag_name_starts_at   = $at;
-				$this->tag_name_length      = $at + $tag_name_prefix_length < $doc_length && 1 === preg_match( '~[^\x09\x0A\x0C\x0D\x20/>]+~AS', $html, $tag_name_length_match, 0, $at + $tag_name_prefix_length)
-					? $tag_name_prefix_length + strlen( $tag_name_length_match[0] )
-					: $tag_name_prefix_length;
+				$this->tag_name_length      = $tag_name_prefix_length + strcspn( $html, " \t\f\r\n/>", $at + $tag_name_prefix_length );
 				$this->bytes_already_parsed = $at + $this->tag_name_length;
 				return true;
 			}
@@ -2074,9 +2070,7 @@ class WP_HTML_Tag_Processor {
 		$doc_length = strlen( $this->html );
 
 		// Skip whitespace and slashes.
-		if ( 1 === preg_match( '~[\x09\x0A\x0C\x0D\x20/]+~AS', $this->html, $ws_match, 0, $this->bytes_already_parsed ) ) {
-			$this->bytes_already_parsed += strlen( $ws_match[0] );
-		}
+		$this->bytes_already_parsed += strspn( $this->html, " \t\f\r\n/", $this->bytes_already_parsed );
 		if ( $this->bytes_already_parsed >= $doc_length ) {
 			$this->parser_state = self::STATE_INCOMPLETE_INPUT;
 
@@ -2089,15 +2083,9 @@ class WP_HTML_Tag_Processor {
 		 *
 		 * @see https://html.spec.whatwg.org/multipage/parsing.html#before-attribute-name-state
 		 */
-		if ( '=' === $this->html[ $this->bytes_already_parsed ] ) {
-			$name_length = $this->bytes_already_parsed + 1 < $doc_length && 1 === preg_match( '~[^\x09\x0A\x0C\x0D =/>]+~AS', $this->html, $attribute_name_match, 0, $this->bytes_already_parsed + 1 )
-				? 1 + strlen( $attribute_name_match[0] )
-				: 1;
-		} else {
-			$name_length = $this->bytes_already_parsed < $doc_length && 1 === preg_match( '~[^\x09\x0A\x0C\x0D =/>]+~AS', $this->html, $attribute_name_match, 0, $this->bytes_already_parsed )
-				? strlen( $attribute_name_match[0] )
-				: 0;
-		}
+		$name_length = '=' === $this->html[ $this->bytes_already_parsed ]
+			? 1 + strcspn( $this->html, "=/> \t\f\r\n", $this->bytes_already_parsed + 1 )
+			: strcspn( $this->html, "=/> \t\f\r\n", $this->bytes_already_parsed );
 
 		// No attribute, just tag closer.
 		if ( 0 === $name_length || $this->bytes_already_parsed + $name_length >= $doc_length ) {
@@ -2144,9 +2132,7 @@ class WP_HTML_Tag_Processor {
 
 				default:
 					$value_start                = $this->bytes_already_parsed;
-					$value_length               = $value_start < $doc_length && 1 === preg_match( '~[^\x09\x0A\x0C\x0D >]+~AS', $this->html, $value_match, 0, $value_start )
-						? strlen( $value_match[0] )
-						: 0;
+					$value_length               = strcspn( $this->html, "> \t\f\r\n", $value_start );
 					$attribute_end              = $value_start + $value_length;
 					$this->bytes_already_parsed = $attribute_end;
 			}
@@ -2216,11 +2202,7 @@ class WP_HTML_Tag_Processor {
 	 * @since 6.2.0
 	 */
 	private function skip_whitespace(): void {
-		if ( 1 !== preg_match( '/[\x09\x0A\x0C\x0D\x20]+/AS', $this->html, $matches, 0, $this->bytes_already_parsed ) ) {
-			return;
-		}
-
-		$this->bytes_already_parsed += strlen( $matches[0] );
+		$this->bytes_already_parsed += strspn( $this->html, " \t\f\r\n", $this->bytes_already_parsed );
 	}
 
 	/**
@@ -2373,9 +2355,7 @@ class WP_HTML_Tag_Processor {
 		while ( $at < $existing_class_length ) {
 			// Skip to the first non-whitespace character.
 			$ws_at     = $at;
-			$ws_length = 1 === preg_match( '/[\x0A-\x0D\x20]+/AS', $existing_class, $ws_match, 0, $ws_at )
-				? strlen( $ws_match[0] )
-				: 0;
+			$ws_length = strspn( $existing_class, " \t\f\r\n", $ws_at );
 			$at       += $ws_length;
 
 			// Capture the class name – it's everything until the next whitespace.
@@ -3523,9 +3503,8 @@ class WP_HTML_Tag_Processor {
 		$at  = $this->text_starts_at;
 		$end = $this->text_starts_at + $this->text_length;
 		while ( $at < $end ) {
-			if ( 1 === preg_match( '/[\x09\x0A\x0C\x0D\x20]+/AS', $this->html, $ws_match, 0, $at ) ) {
-				$at += strlen( $ws_match[0] );
-			}
+			$skipped = strspn( $this->html, " \t\f\r\n", $at, $end - $at );
+			$at     += $skipped;
 
 			if ( $at < $end && '&' === $this->html[ $at ] ) {
 				$matched_byte_length = null;
