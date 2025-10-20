@@ -5381,7 +5381,7 @@ function get_post_galleries( $post, $html = true, $max_galleries = PHP_INT_MAX )
 						$ids[] = $id;
 						$url   = wp_get_attachment_url( $id );
 
-						if ( is_string( $url ) && !in_array( $url, $srcs, true ) ) {
+						if ( is_string( $url ) && ! in_array( $url, $srcs, true ) ) {
 							$srcs[] = $url;
 						}
 					}
