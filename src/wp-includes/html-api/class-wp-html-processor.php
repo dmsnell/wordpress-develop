@@ -2778,7 +2778,9 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 
 				$this->reconstruct_active_formatting_elements();
 				$this->insert_html_element( $this->state->current_token );
-				if ( false === $this->state->active_formatting_elements->push( $this->state->current_token ) ) {
+				$bookmark   = $this->bookmarks[ $this->state->current_token->bookmark_name ];
+				$token_html = substr( $this->html, $bookmark->start, $bookmark->length );
+				if ( false === $this->state->active_formatting_elements->push( $this->state->current_token, $token_html ) ) {
 					$this->bail( 'Cannot track formatting elements when encountering a fourth identical token.' );
 				}
 				$this->actively_reconstructed_formatting_attributes[ $this->state->current_token->bookmark_name ] = $this->attributes;
@@ -2802,7 +2804,9 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 			case '+U':
 				$this->reconstruct_active_formatting_elements();
 				$this->insert_html_element( $this->state->current_token );
-				if ( false === $this->state->active_formatting_elements->push( $this->state->current_token ) ) {
+				$bookmark   = $this->bookmarks[ $this->state->current_token->bookmark_name ];
+				$token_html = substr( $this->html, $bookmark->start, $bookmark->length );
+				if ( false === $this->state->active_formatting_elements->push( $this->state->current_token, $token_html ) ) {
 					$this->bail( 'Cannot track formatting elements when encountering a fourth identical token.' );
 				}
 				$this->actively_reconstructed_formatting_attributes[ $this->state->current_token->bookmark_name ] = $this->attributes;
@@ -2821,7 +2825,9 @@ class WP_HTML_Processor extends WP_HTML_Tag_Processor {
 				}
 
 				$this->insert_html_element( $this->state->current_token );
-				if ( false === $this->state->active_formatting_elements->push( $this->state->current_token ) ) {
+				$bookmark   = $this->bookmarks[ $this->state->current_token->bookmark_name ];
+				$token_html = substr( $this->html, $bookmark->start, $bookmark->length );
+				if ( false === $this->state->active_formatting_elements->push( $this->state->current_token, $token_html ) ) {
 					$this->bail( 'Cannot track formatting elements when encountering a fourth identical token.' );
 				}
 				$this->actively_reconstructed_formatting_attributes[ $this->state->current_token->bookmark_name ] = $this->attributes;
