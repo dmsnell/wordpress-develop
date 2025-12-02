@@ -44,6 +44,17 @@ class WP_HTML_Active_Formatting_Elements {
 	private $stack = array();
 
 	/**
+	 * Holds a stack of hashes representing uniquely representing the active formatting element.
+	 *
+	 * This is important to efficiently track and remove duplicate elements when pushing.
+	 *
+	 * @since 7.0.0
+	 *
+	 * @var string[]
+	 */
+	private $hash_stack = array();
+
+	/**
 	 * Returns the node at the given 1-offset index in the list of active formatting elements.
 	 *
 	 * @since 7.0.0
@@ -111,7 +122,52 @@ class WP_HTML_Active_Formatting_Elements {
 	 * @since 6.7.0
 	 */
 	public function insert_marker(): void {
-		$this->push( new WP_HTML_Token( null, 'marker', false ) );
+		$this->stack[]      = new WP_HTML_Token( null, 'marker', false );
+		$this->hash_stack[] = 'marker';
+	}
+
+	/**
+	 * Generates a hash string for a given token, based on its
+	 * tag name, namespace, and attributes.
+	 *
+	 * @since 7.0.0
+	 *
+	 * @param WP_HTML_Token $token      Token to generate a hash for.
+	 * @param string        $token_html The original HTML of the token.
+	 * @return string Generated hash string.
+	 */
+	private function get_token_hash( WP_HTML_Token $token, string $token_html ): string {
+		$processor   = new WP_HTML_Tag_Processor( $token_html );
+		$processor->change_parsing_namespace( $token->namespace );
+		$processor->next_tag();
+
+		$node_name   = $processor->get_qualified_tag_name();
+		$hash_string = "{$token->namespace}::<{$node_name}";
+
+		$attribute_names = $processor->get_attribute_names_with_prefix( '' );
+		if ( ! empty( $attribute_names ) ) {
+			$attr_parts = [];
+			sort( $attribute_names, SORT_STRING );
+			foreach ( $attribute_names as $attribute_name ) {
+				$display_name = $processor->get_qualified_attribute_name( $attribute_name );
+				$val = $processor->get_attribute( $attribute_name );
+
+				/*
+				 * Attributes with no value are `true` with the HTML API,
+				 * We map use the empty string value in the tree structure.
+				 */
+				if ( true === $val ) {
+					$val = '';
+				}
+				$val = strtr( $val, '"', '&quot;' );
+
+				$attr_parts[] = "{$display_name}=\"{$val}\"";
+			}
+			$hash_string .= ' ' . implode( ' ', $attr_parts );
+		}
+		$hash_string .= '>';
+
+		return dechex( crc32( $hash_string ) );
 	}
 
 	/**
@@ -124,7 +180,7 @@ class WP_HTML_Active_Formatting_Elements {
 	 * @param WP_HTML_Token $token Push this node onto the stack.
 	 * @return bool Whether a node was pushed onto the stack of active formatting elements.
 	 */
-	public function push( WP_HTML_Token $token ): bool {
+	public function push( WP_HTML_Token $token, string $token_html ): bool {
 		/*
 		 * > If there are already three elements in the list of active formatting elements after the last marker,
 		 * > if any, or anywhere in the list if there are no markers, that have the same tag name, namespace, and
@@ -135,29 +191,35 @@ class WP_HTML_Active_Formatting_Elements {
 		 * > (the order of the attributes does not matter).
 		 */
 
-		if ( 'marker' !== $token->node_name ) {
-			$existing_count = 0;
-			foreach ( $this->walk_up() as $item ) {
-				if ( 'marker' === $item->node_name ) {
-					break;
-				}
+		if ( 'marker' === $token->node_name ) {
+			_doing_it_wrong(
+				__METHOD__,
+				'Markers must be added using the WP_HTML_Active_Formatting_Elements::insert_marker() method.',
+				'7.0.0'
+			);
+			return false;
+		}
 
-				if (
-					$item->node_name === $token->node_name &&
-					$item->namespace === $token->namespace
-					// @todo Compare attributes. For now, bail if there are three matching tag names + namespaces.
-				) {
-					++$existing_count;
-					if ( $existing_count >= 3 ) {
-						// @todo Implement removing the earliest element and moving forward.
-						return false;
-					}
+		$token_hash     = $this->get_token_hash( $token, $token_html );
+		$existing_count = 0;
+		for ( $i = count( $this->hash_stack ) - 1; $i >= 0; $i-- ) {
+			$item_hash = $this->hash_stack[ $i ];
+
+			if ( 'marker' === $item_hash ) {
+				break;
+			}
+
+			if ( $item_hash === $token_hash ) {
+				if ( ++$existing_count >= 3 ) {
+					$this->remove_node( $this->stack[ $i ] );
+					break;
 				}
 			}
 		}
 
 		// > Add element to the list of active formatting elements.
-		$this->stack[] = $token;
+		$this->stack[]      = $token;
+		$this->hash_stack[] = $token_hash;
 		return true;
 	}
 
@@ -177,6 +239,7 @@ class WP_HTML_Active_Formatting_Elements {
 
 			$position_from_start = $this->count() - $position_from_end - 1;
 			array_splice( $this->stack, $position_from_start, 1 );
+			array_splice( $this->hash_stack, $position_from_start, 1 );
 			return true;
 		}
 
@@ -255,6 +318,7 @@ class WP_HTML_Active_Formatting_Elements {
 	public function clear_up_to_last_marker(): void {
 		foreach ( $this->walk_up() as $item ) {
 			array_pop( $this->stack );
+			array_pop( $this->hash_stack );
 			if ( 'marker' === $item->node_name ) {
 				break;
 			}
