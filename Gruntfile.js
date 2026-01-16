@@ -1456,10 +1456,16 @@ module.exports = function(grunt) {
 		} );
 	} );
 
-	grunt.registerTask( 'gutenberg-integrate', 'Complete Gutenberg integration workflow.', [
-		'gutenberg-build',
-		'gutenberg-copy'
-	] );
+	grunt.registerTask( 'gutenberg-sync', 'Syncs Gutenberg checkout and build if ref has changed.', function() {
+		const done = this.async();
+		grunt.util.spawn( {
+			cmd: 'node',
+			args: [ 'tools/gutenberg/sync-gutenberg.js' ],
+			opts: { stdio: 'inherit' }
+		}, function( error ) {
+			done( ! error );
+		} );
+	} );
 
 	grunt.registerTask( 'copy-vendor-scripts', 'Copies vendor scripts from node_modules to wp-includes/js/dist/vendor/.', function() {
 		const done = this.async();
@@ -1894,7 +1900,8 @@ module.exports = function(grunt) {
 			grunt.task.run( [
 				'build:js',
 				'build:css',
-				'gutenberg-integrate',
+				'gutenberg-sync',
+				'gutenberg-copy',
 				'copy-vendor-scripts',
 				'build:certificates'
 			] );
@@ -1904,7 +1911,8 @@ module.exports = function(grunt) {
 				'build:files',
 				'build:js',
 				'build:css',
-				'gutenberg-integrate',
+				'gutenberg-sync',
+				'gutenberg-copy',
 				'copy-vendor-scripts',
 				'replace:source-maps',
 				'verify:build'
