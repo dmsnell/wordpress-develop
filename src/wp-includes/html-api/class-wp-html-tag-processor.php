@@ -16,6 +16,7 @@
  *    This would increase the size of the changes for some operations but leave more
  *    natural-looking output HTML.
  *  - Search for a token by CSS selector.
+ *  - Make fastest for WordPress great good.
  *
  * @package WordPress
  * @subpackage HTML-API
