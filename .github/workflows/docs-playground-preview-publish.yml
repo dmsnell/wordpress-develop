@@ -170,16 +170,12 @@ jobs:
           echo "snapshot-url=$(node -e 'const j = require(process.argv[1]); console.log(j[\"docs-playground-snapshot\"] || \"\")' "$mapping_file")" >> "$GITHUB_OUTPUT"
           echo "diagnostics-url=$(node -e 'const j = require(process.argv[1]); console.log(j[\"docs-preview-diagnostics\"] || \"\")' "$mapping_file")" >> "$GITHUB_OUTPUT"
 
-      - name: Render and upload Playground blueprint
+      - name: Render Playground blueprint
         id: blueprint
         if: env.SKIP != '1'
         shell: bash
         env:
-          RELEASE_TAG: ${{ env.DOCS_PLAYGROUND_RELEASE_TAG }}
-          PR_NUMBER: ${{ steps.meta.outputs.pr-number }}
-          COMMIT_SHA: ${{ steps.meta.outputs.commit-sha }}
           MAPPING_FILE: ${{ steps.urls.outputs.mapping-file }}
-          GH_TOKEN: ${{ github.token }}
           BLUEPRINT_INPUT: |
             {
               "$schema": "https://playground.wordpress.net/blueprint-schema.json",
@@ -214,34 +210,37 @@ jobs:
           node <<'NODE'
             const fs = require('fs');
             const urls = JSON.parse(fs.readFileSync(process.env.MAPPING_FILE, 'utf8'));
+            const proxyUrl = (url) => `https://wordpress-playground-cors-proxy.net/${url}`;
+            const playgroundUrls = {
+              ...urls,
+              'docs-playground-snapshot': proxyUrl(urls['docs-playground-snapshot']),
+            };
             const substitute = (template) =>
               template.replace(/\{\{\s*ARTIFACT_URL:([a-zA-Z0-9_-]+)\s*\}\}/g, (_, name) => {
-                if (!(name in urls)) {
-                  throw new Error(`Blueprint references unknown artifact: ${name}. Available: ${Object.keys(urls).join(', ') || '(none)'}`);
+                if (!(name in playgroundUrls)) {
+                  throw new Error(`Blueprint references unknown artifact: ${name}. Available: ${Object.keys(playgroundUrls).join(', ') || '(none)'}`);
                 }
-                return JSON.stringify(urls[name]).slice(1, -1);
+                return JSON.stringify(playgroundUrls[name]).slice(1, -1);
               });
 
             const blueprint = substitute(process.env.BLUEPRINT_INPUT);
             const parsed = JSON.parse(blueprint);
-            fs.writeFileSync('docs-playground-blueprint.json', `${JSON.stringify(parsed, null, 2)}\n`);
-          NODE
+            const minified = JSON.stringify(parsed);
+            const playgroundUrl = `https://playground.wordpress.net/?blueprint-url=data:application/json,${encodeURIComponent(minified)}`;
 
-          asset="pr-${PR_NUMBER}-${COMMIT_SHA}-blueprint.json"
-          cp docs-playground-blueprint.json "$asset"
-          gh release upload "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY" --clobber
-          blueprint_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${asset}"
-          playground_url="$(node -e 'console.log("https://playground.wordpress.net/?blueprint-url=" + encodeURIComponent(process.argv[1]))' "$blueprint_url")"
-          echo "blueprint-url=$blueprint_url" >> "$GITHUB_OUTPUT"
-          echo "playground-url=$playground_url" >> "$GITHUB_OUTPUT"
+            fs.writeFileSync('docs-playground-blueprint.json', `${JSON.stringify(parsed, null, 2)}\n`);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `blueprint-json<<DOCS_BLUEPRINT_JSON\n${minified}\nDOCS_BLUEPRINT_JSON\n`);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `playground-url=${playgroundUrl}\n`);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `snapshot-proxy-url=${playgroundUrls['docs-playground-snapshot']}\n`);
+          NODE
 
       - name: Print Playground URL
         if: env.SKIP != '1'
         shell: bash
         env:
           PLAYGROUND_URL: ${{ steps.blueprint.outputs.playground-url }}
-          BLUEPRINT_URL: ${{ steps.blueprint.outputs.blueprint-url }}
           SNAPSHOT_URL: ${{ steps.urls.outputs.snapshot-url }}
+          SNAPSHOT_PROXY_URL: ${{ steps.blueprint.outputs.snapshot-proxy-url }}
           DIAGNOSTICS_URL: ${{ steps.urls.outputs.diagnostics-url }}
         run: |
           set -euo pipefail
@@ -250,10 +249,54 @@ jobs:
             echo "### Docs Playground preview"
             echo ""
             echo "- Playground: $PLAYGROUND_URL"
-            echo "- Blueprint: $BLUEPRINT_URL"
+            echo "- Blueprint: inline data URL embedded in the Playground link"
             echo "- Snapshot: $SNAPSHOT_URL"
+            echo "- Snapshot via Playground CORS proxy: $SNAPSHOT_PROXY_URL"
             echo "- Diagnostics: $DIAGNOSTICS_URL"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Assert proxied snapshot URL
+        if: env.SKIP != '1'
+        shell: bash
+        env:
+          SNAPSHOT_PROXY_URL: ${{ steps.blueprint.outputs.snapshot-proxy-url }}
+        run: |
+          set -euo pipefail
+          max_proxy_bytes=$((100 * 1024 * 1024))
+          snapshot_bytes="$(wc -c < bundle/zips/docs-playground-snapshot.zip)"
+          if [ "$snapshot_bytes" -ge "$max_proxy_bytes" ]; then
+            echo "::error::Docs Playground snapshot is too large for the Playground CORS proxy: $snapshot_bytes >= $max_proxy_bytes" >&2
+            exit 1
+          fi
+
+          headers="$RUNNER_TEMP/docs-playground-snapshot-proxy-headers.txt"
+          body="$RUNNER_TEMP/docs-playground-snapshot-proxy-body.txt"
+          status="$(curl -sS -D "$headers" -o "$body" -H 'Origin: https://playground.wordpress.net' -w '%{http_code}' "$SNAPSHOT_PROXY_URL")"
+          case "$status" in
+            2*|3*) ;;
+            *)
+              echo "::error::Playground CORS proxy returned HTTP $status for the snapshot URL." >&2
+              sed -n '1,120p' "$headers" >&2
+              sed -n '1,40p' "$body" >&2
+              exit 1
+              ;;
+          esac
+
+          if ! grep -iq '^x-playground-cors-proxy: true' "$headers"; then
+            echo "::error::Snapshot URL response did not include X-Playground-Cors-Proxy." >&2
+            sed -n '1,120p' "$headers" >&2
+            exit 1
+          fi
+          if ! grep -iq '^access-control-allow-origin: https://playground.wordpress.net' "$headers"; then
+            echo "::error::Snapshot URL response did not allow the Playground origin." >&2
+            sed -n '1,120p' "$headers" >&2
+            exit 1
+          fi
+          if [ "${status#3}" != "$status" ] && ! grep -Eiq '^location: /https://' "$headers"; then
+            echo "::error::Playground CORS proxy redirect was not rewritten back through the proxy." >&2
+            sed -n '1,120p' "$headers" >&2
+            exit 1
+          fi
 
       - name: Assert docs preview smoke result
         if: env.SKIP != '1'
@@ -340,6 +383,6 @@ jobs:
         uses: WordPress/action-wp-playground-pr-preview@c8607529dac8d2bf9a1e8493865fc97cd1c3c87b # v2
         with:
           mode: comment
-          blueprint-url: ${{ steps.blueprint.outputs.blueprint-url }}
+          blueprint: ${{ steps.blueprint.outputs.blueprint-json }}
           pr-number: ${{ steps.meta.outputs.pr-number }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
