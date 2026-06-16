@@ -646,6 +646,10 @@ echo "Reference API navigation seeded.\\n";
 async function validateSnapshotWithServer(deps, snapshotPath, logDir, manifest) {
 	const restoreBlueprint = path.join(path.dirname(snapshotPath), 'restore-blueprint.json');
 	const pathInZip = await detectPathInZip(snapshotPath);
+	const smokeResult = {
+		ok: false,
+		pathInZip: pathInZip || '',
+	};
 	const blueprint = {
 		$schema: deps.playground.blueprintSchema,
 		preferredVersions: {
@@ -688,6 +692,7 @@ async function validateSnapshotWithServer(deps, snapshotPath, logDir, manifest) 
 	child.stdout.on('data', (chunk) => { output += chunk.toString(); });
 	child.stderr.on('data', (chunk) => { output += chunk.toString(); });
 
+	let smokeError = null;
 	try {
 		await waitForHttp(`http://127.0.0.1:${port}/reference/`, 180_000);
 		const routeResults = {};
@@ -701,11 +706,22 @@ async function validateSnapshotWithServer(deps, snapshotPath, logDir, manifest) 
 			}
 			routeResults[route] = { bytes: body.length };
 		}
+		smokeResult.ok = true;
+		smokeResult.routes = routeResults;
 		manifest.checks.routes = routeResults;
 		manifest.checks.pathInZip = pathInZip || '';
+	} catch (error) {
+		smokeError = error;
+		smokeResult.error = error instanceof Error ? error.message : String(error);
 	} finally {
 		child.kill('SIGTERM');
 		await fs.writeFile(path.join(logDir, 'restore-smoke.log'), output);
+	}
+
+	manifest.checks.restoreSmoke = smokeResult;
+	if (smokeError) {
+		console.warn(`Warning: docs Playground restore smoke failed: ${smokeResult.error}`);
+		logGroup('Docs Playground restore smoke output', output);
 	}
 }
 
@@ -874,7 +890,8 @@ async function fetchText(url) {
 			res.on('data', (chunk) => { body += chunk; });
 			res.on('end', () => {
 				if ((res.statusCode || 0) >= 400) {
-					reject(new Error(`${url} returned ${res.statusCode}`));
+					const excerpt = bodyExcerpt(body);
+					reject(new Error(`${url} returned ${res.statusCode}${excerpt ? `\nResponse body:\n${excerpt}` : ''}`));
 				} else {
 					resolve(body);
 				}
@@ -885,6 +902,30 @@ async function fetchText(url) {
 			req.destroy(new Error(`Timed out fetching ${url}`));
 		});
 	});
+}
+
+function bodyExcerpt(body, limit = 4000) {
+	const clean = String(body || '').replace(/\0/g, '');
+	if (!clean) {
+		return '';
+	}
+	if (clean.length <= limit) {
+		return clean;
+	}
+	return `${clean.slice(0, limit)}\n...[truncated ${clean.length - limit} chars]`;
+}
+
+function logGroup(title, body, limit = 20000) {
+	const clean = String(body || '').trim();
+	if (!clean) {
+		return;
+	}
+	const excerpt = clean.length > limit
+		? `${clean.slice(clean.length - limit)}\n...[truncated ${clean.length - limit} earlier chars]`
+		: clean;
+	console.log(`::group::${title}`);
+	console.log(excerpt);
+	console.log('::endgroup::');
 }
 
 async function getFreePort() {

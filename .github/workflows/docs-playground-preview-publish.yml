@@ -1,6 +1,6 @@
 name: Docs Playground Preview Publish
 
-on: # zizmor: ignore[dangerous-triggers] Publishes only the v3 preview-build artifact after the pinned reusable publisher validates workflow_run event/conclusion, artifact name, PR number, and head SHA.
+on: # zizmor: ignore[dangerous-triggers] Publishes only the preview-build artifact after validating workflow_run event/conclusion, artifact name, PR number, and head SHA.
   workflow_run:
     workflows:
       - 'Docs Playground Preview Build'
@@ -16,45 +16,330 @@ concurrency:
 # Any needed permissions should be configured at the job level.
 permissions: {}
 
+env:
+  DOCS_PLAYGROUND_RELEASE_TAG: docs-playground-preview-artifacts
+
 jobs:
   publish-docs-playground-preview:
     name: Publish docs Playground preview
     if: ${{ github.repository == 'WordPress/wordpress-develop' || github.repository == 'dmsnell/wordpress-develop' }}
-    uses: WordPress/action-wp-playground-pr-preview/.github/workflows/preview-publish.yml@43fc435558bc6cee69f5b214d6b8ca4f9f80c31d # v3
+    runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: write
+      issues: write
       pull-requests: write
-    with:
-      release-tag: docs-playground-preview-artifacts
-      artifacts-to-keep: '2'
-      mode: comment
-      blueprint: |
-        {
-          "$schema": "https://playground.wordpress.net/blueprint-schema.json",
-          "meta": {
-            "title": "WordPress Core API Docs Preview",
-            "author": "WordPress Core",
-            "description": "Official DevHub Code Reference preview generated from a WordPress Core pull request."
-          },
-          "preferredVersions": {
-            "php": "8.4",
-            "wp": "6.9.1"
-          },
-          "landingPage": "/reference/classes/wp_html_tag_processor/",
-          "login": true,
-          "steps": [
-            {
-              "step": "unzip",
-              "zipFile": {
-                "resource": "url",
-                "url": "{{ARTIFACT_URL:docs-playground-snapshot}}"
-              },
-              "extractToPath": "/wordpress"
-            },
-            {
-              "step": "runPHP",
-              "code": "<?php\nrequire_once '/wordpress/wp-load.php';\n\n$scheme = ( ! empty( $_SERVER['HTTPS'] ) && 'off' !== $_SERVER['HTTPS'] ) ? 'https' : 'http';\n$host   = $_SERVER['HTTP_HOST'] ?? '127.0.0.1';\n$path   = dirname( $_SERVER['SCRIPT_NAME'] ?? '' );\n\nif ( '.' === $path || '/' === $path ) {\n\t$path = '';\n}\n\n$url = rtrim( $scheme . '://' . $host . $path, '/' );\nupdate_option( 'siteurl', $url );\nupdate_option( 'home', $url );\nflush_rewrite_rules( false );\n"
+    steps:
+      - name: Guard against misuse
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_RUN_EVENT: ${{ github.event.workflow_run.event }}
+          WORKFLOW_RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" != "workflow_run" ]; then
+            echo "::error::Docs Playground preview publication must be invoked from a workflow_run trigger." >&2
+            exit 1
+          fi
+          if [ "$WORKFLOW_RUN_EVENT" != "pull_request" ]; then
+            echo "Source workflow was not a pull_request ($WORKFLOW_RUN_EVENT); skipping."
+            echo "SKIP=1" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          if [ "$WORKFLOW_RUN_CONCLUSION" != "success" ]; then
+            echo "Source workflow did not succeed ($WORKFLOW_RUN_CONCLUSION); skipping."
+            echo "SKIP=1" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+      - name: Identify artifact bundle
+        id: meta
+        if: env.SKIP != '1'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+        with:
+          script: |
+            const runId = Number(process.env.SOURCE_RUN_ID);
+            const list = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId,
+            });
+            const artifacts = list.data.artifacts.filter((artifact) =>
+              /^wp-playground-preview-pr\d+-[0-9a-f]+$/i.test(artifact.name)
+            );
+            if (artifacts.length === 0) {
+              throw new Error('No wp-playground-preview-pr* bundle found in source run.');
             }
-          ]
-        }
+            if (artifacts.length !== 1) {
+              throw new Error(`Expected exactly one wp-playground-preview-pr* bundle, found ${artifacts.length}: ${artifacts.map((artifact) => artifact.name).join(', ')}`);
+            }
+
+            const artifact = artifacts[0];
+            const match = artifact.name.match(/^wp-playground-preview-pr(\d+)-(.+)$/);
+            if (!match) {
+              throw new Error(`Cannot parse artifact name: ${artifact.name}`);
+            }
+
+            const [, prNumber, commitSha] = match;
+            const expectedSha = context.payload.workflow_run.head_sha;
+            if (commitSha !== expectedSha) {
+              throw new Error(`Artifact SHA ${commitSha} does not match source workflow_run.head_sha ${expectedSha}.`);
+            }
+
+            const prResponse = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: Number(prNumber),
+            });
+            if (prResponse.data.head.sha !== expectedSha) {
+              throw new Error(`Artifact PR number ${prNumber} points to head SHA ${prResponse.data.head.sha}, not workflow_run.head_sha ${expectedSha}.`);
+            }
+
+            core.setOutput('artifact-id', String(artifact.id));
+            core.setOutput('artifact-name', artifact.name);
+            core.setOutput('pr-number', prNumber);
+            core.setOutput('commit-sha', commitSha);
+
+      - name: Download artifact bundle
+        if: env.SKIP != '1'
+        shell: bash
+        env:
+          ARTIFACT_ID: ${{ steps.meta.outputs.artifact-id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p bundle
+          gh api -X GET "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}/zip" > bundle.zip
+          unzip -oq bundle.zip -d bundle
+          find bundle -maxdepth 3 -type f -print
+          test -f bundle/zips/docs-playground-snapshot.zip
+          test -f bundle/zips/docs-preview-diagnostics.zip
+
+      - name: Ensure release exists
+        if: env.SKIP != '1'
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ env.DOCS_PLAYGROUND_RELEASE_TAG }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            exit 0
+          fi
+          gh release create "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --prerelease \
+            --notes "Automated prerelease for WordPress Playground CI artifacts"
+
+      - name: Upload zips and resolve URLs
+        id: urls
+        if: env.SKIP != '1'
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ env.DOCS_PLAYGROUND_RELEASE_TAG }}
+          PR_NUMBER: ${{ steps.meta.outputs.pr-number }}
+          COMMIT_SHA: ${{ steps.meta.outputs.commit-sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          mapping_file="$RUNNER_TEMP/artifact-urls.json"
+          echo '{}' > "$mapping_file"
+          for src in bundle/zips/*.zip; do
+            name="$(basename "$src" .zip)"
+            asset="pr-${PR_NUMBER}-${COMMIT_SHA}-${name}.zip"
+            cp "$src" "$asset"
+            gh release upload "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY" --clobber
+            url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${asset}"
+            node -e '
+              const fs = require("fs");
+              const f = process.argv[1];
+              const k = process.argv[2];
+              const v = process.argv[3];
+              const json = JSON.parse(fs.readFileSync(f, "utf8"));
+              json[k] = v;
+              fs.writeFileSync(f, JSON.stringify(json));
+            ' "$mapping_file" "$name" "$url"
+            echo "Exposed: $name -> $url"
+          done
+
+          echo "mapping-file=$mapping_file" >> "$GITHUB_OUTPUT"
+          echo "snapshot-url=$(node -e 'const j = require(process.argv[1]); console.log(j[\"docs-playground-snapshot\"] || \"\")' "$mapping_file")" >> "$GITHUB_OUTPUT"
+          echo "diagnostics-url=$(node -e 'const j = require(process.argv[1]); console.log(j[\"docs-preview-diagnostics\"] || \"\")' "$mapping_file")" >> "$GITHUB_OUTPUT"
+
+      - name: Render and upload Playground blueprint
+        id: blueprint
+        if: env.SKIP != '1'
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ env.DOCS_PLAYGROUND_RELEASE_TAG }}
+          PR_NUMBER: ${{ steps.meta.outputs.pr-number }}
+          COMMIT_SHA: ${{ steps.meta.outputs.commit-sha }}
+          MAPPING_FILE: ${{ steps.urls.outputs.mapping-file }}
+          GH_TOKEN: ${{ github.token }}
+          BLUEPRINT_INPUT: |
+            {
+              "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+              "meta": {
+                "title": "WordPress Core API Docs Preview",
+                "author": "WordPress Core",
+                "description": "Official DevHub Code Reference preview generated from a WordPress Core pull request."
+              },
+              "preferredVersions": {
+                "php": "8.4",
+                "wp": "6.9.1"
+              },
+              "landingPage": "/reference/classes/wp_html_tag_processor/",
+              "login": true,
+              "steps": [
+                {
+                  "step": "unzip",
+                  "zipFile": {
+                    "resource": "url",
+                    "url": "{{ARTIFACT_URL:docs-playground-snapshot}}"
+                  },
+                  "extractToPath": "/wordpress"
+                },
+                {
+                  "step": "runPHP",
+                  "code": "<?php\nrequire_once '/wordpress/wp-load.php';\n\n$scheme = ( ! empty( $_SERVER['HTTPS'] ) && 'off' !== $_SERVER['HTTPS'] ) ? 'https' : 'http';\n$host   = $_SERVER['HTTP_HOST'] ?? '127.0.0.1';\n$path   = dirname( $_SERVER['SCRIPT_NAME'] ?? '' );\n\nif ( '.' === $path || '/' === $path ) {\n\t$path = '';\n}\n\n$url = rtrim( $scheme . '://' . $host . $path, '/' );\nupdate_option( 'siteurl', $url );\nupdate_option( 'home', $url );\nflush_rewrite_rules( false );\n"
+                }
+              ]
+            }
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+            const fs = require('fs');
+            const urls = JSON.parse(fs.readFileSync(process.env.MAPPING_FILE, 'utf8'));
+            const substitute = (template) =>
+              template.replace(/\{\{\s*ARTIFACT_URL:([a-zA-Z0-9_-]+)\s*\}\}/g, (_, name) => {
+                if (!(name in urls)) {
+                  throw new Error(`Blueprint references unknown artifact: ${name}. Available: ${Object.keys(urls).join(', ') || '(none)'}`);
+                }
+                return JSON.stringify(urls[name]).slice(1, -1);
+              });
+
+            const blueprint = substitute(process.env.BLUEPRINT_INPUT);
+            const parsed = JSON.parse(blueprint);
+            fs.writeFileSync('docs-playground-blueprint.json', `${JSON.stringify(parsed, null, 2)}\n`);
+          NODE
+
+          asset="pr-${PR_NUMBER}-${COMMIT_SHA}-blueprint.json"
+          cp docs-playground-blueprint.json "$asset"
+          gh release upload "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY" --clobber
+          blueprint_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${asset}"
+          playground_url="$(node -e 'console.log("https://playground.wordpress.net/?blueprint-url=" + encodeURIComponent(process.argv[1]))' "$blueprint_url")"
+          echo "blueprint-url=$blueprint_url" >> "$GITHUB_OUTPUT"
+          echo "playground-url=$playground_url" >> "$GITHUB_OUTPUT"
+
+      - name: Print Playground URL
+        if: env.SKIP != '1'
+        shell: bash
+        env:
+          PLAYGROUND_URL: ${{ steps.blueprint.outputs.playground-url }}
+          BLUEPRINT_URL: ${{ steps.blueprint.outputs.blueprint-url }}
+          SNAPSHOT_URL: ${{ steps.urls.outputs.snapshot-url }}
+          DIAGNOSTICS_URL: ${{ steps.urls.outputs.diagnostics-url }}
+        run: |
+          set -euo pipefail
+          echo "Docs Playground preview URL: $PLAYGROUND_URL"
+          {
+            echo "### Docs Playground preview"
+            echo ""
+            echo "- Playground: $PLAYGROUND_URL"
+            echo "- Blueprint: $BLUEPRINT_URL"
+            echo "- Snapshot: $SNAPSHOT_URL"
+            echo "- Diagnostics: $DIAGNOSTICS_URL"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Assert docs preview smoke result
+        if: env.SKIP != '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf diagnostics
+          mkdir -p diagnostics
+          unzip -oq bundle/zips/docs-preview-diagnostics.zip -d diagnostics
+
+          set +e
+          node <<'NODE'
+            const fs = require('fs');
+            const manifestPath = 'diagnostics/docs-preview-manifest.json';
+            if (!fs.existsSync(manifestPath)) {
+              throw new Error(`Missing diagnostics manifest: ${manifestPath}`);
+            }
+
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            const smoke = manifest.checks && manifest.checks.restoreSmoke;
+            if (!smoke || smoke.ok !== true) {
+              const message = smoke && smoke.error ? smoke.error : 'Missing restore smoke result.';
+              console.error(`::error::Docs Playground restore smoke failed: ${message.split(/\r?\n/)[0]}`);
+              console.error(message);
+              process.exit(1);
+            }
+
+            console.log('Docs Playground restore smoke passed.');
+          NODE
+          status=$?
+          set -e
+
+          if [ "$status" -ne 0 ]; then
+            echo "::group::Docs preview diagnostics"
+            if [ -f diagnostics/docs-preview-manifest.json ]; then
+              sed -n '1,220p' diagnostics/docs-preview-manifest.json
+            fi
+            if [ -f diagnostics/logs/restore-smoke.log ]; then
+              sed -n '1,260p' diagnostics/logs/restore-smoke.log
+            fi
+            echo "::endgroup::"
+            exit "$status"
+          fi
+
+      - name: Cleanup old artifacts
+        if: env.SKIP != '1'
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ env.DOCS_PLAYGROUND_RELEASE_TAG }}
+          PR_NUMBER: ${{ steps.meta.outputs.pr-number }}
+          ARTIFACTS_TO_KEEP: '2'
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq ".assets[] | select(.name | startswith(\"pr-$PR_NUMBER-\")) | \"\(.createdAt)|\(.name)\"" \
+            > pr-assets.txt || true
+          [ -s pr-assets.txt ] || exit 0
+
+          sort -r pr-assets.txt | awk -F'|' -v keep="$ARTIFACTS_TO_KEEP" '
+            {
+              name=$2;
+              split(name, parts, "-");
+              sha=parts[3];
+              if (!(sha in seen)) { seen[sha]=++distinct }
+              if (seen[sha] > keep) print name;
+            }
+          ' > to-delete.txt
+
+          delete_errors=0
+          while IFS= read -r asset; do
+            [ -z "$asset" ] && continue
+            if ! gh release delete-asset "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY" --yes; then
+              echo "::error::Failed to delete release asset: $asset" >&2
+              delete_errors=1
+            fi
+          done < to-delete.txt
+          if [ "$delete_errors" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Post Playground preview button
+        if: env.SKIP != '1'
+        uses: WordPress/action-wp-playground-pr-preview@c8607529dac8d2bf9a1e8493865fc97cd1c3c87b # v2
+        with:
+          mode: comment
+          blueprint-url: ${{ steps.blueprint.outputs.blueprint-url }}
+          pr-number: ${{ steps.meta.outputs.pr-number }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
