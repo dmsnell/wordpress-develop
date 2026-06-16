@@ -24,7 +24,9 @@ jobs:
     permissions:
       contents: read
     with:
-      artifacts: docs-playground-snapshot=build/docs-playground-snapshot.zip
+      artifacts: |
+        docs-playground-snapshot=build/docs-playground-snapshot.zip
+        docs-preview-diagnostics=build/docs-preview-diagnostics.zip
       node-version: '20'
       php-version: '8.4'
       build-command: |
@@ -34,3 +36,7 @@ jobs:
           --out "$GITHUB_WORKSPACE/build" \
           --pr-number "${{ github.event.pull_request.number }}" \
           --head-sha "${{ github.event.pull_request.head.sha }}"
+        (
+          cd "$GITHUB_WORKSPACE/build"
+          zip -rq docs-preview-diagnostics.zip docs-preview-manifest.json restore-blueprint.json logs
+        )
