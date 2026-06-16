@@ -298,6 +298,21 @@ jobs:
             exit 1
           fi
 
+      - name: Post diagnostic Playground preview comment
+        if: env.SKIP != '1'
+        uses: WordPress/action-wp-playground-pr-preview@c8607529dac8d2bf9a1e8493865fc97cd1c3c87b # v2
+        with:
+          mode: comment
+          blueprint: ${{ steps.blueprint.outputs.blueprint-json }}
+          pr-number: ${{ steps.meta.outputs.pr-number }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          comment-template: |
+            ### WordPress Playground Preview
+
+            A docs preview was generated for this pull request, but the docs smoke validation has not passed yet. Use this preview for manual inspection while the failing validation is investigated.
+
+            {{PLAYGROUND_BUTTON}}
+
       - name: Assert docs preview smoke result
         if: env.SKIP != '1'
         shell: bash
