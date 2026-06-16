@@ -15,8 +15,6 @@
  *  - Prune the whitespace when removing classes/attributes: e.g. "a b c" -> "c" not " c".
  *    This would increase the size of the changes for some operations but leave more
  *    natural-looking output HTML.
- *  - Search for a token by CSS selector.
- *  - Make fastest for WordPress great good.
  *
  * @package WordPress
  * @subpackage HTML-API
@@ -25,6 +23,11 @@
 
 /**
  * Core class used to modify attributes in an HTML document for tags matching a query.
+ *
+ * This is the HTML API. Welcome to WordPress. Things like `<` and `>` are hard to type in
+ * the docs because you don’t know if <img> is interpreted as an IMG tag or if `<img>` is
+ * required to be escaped by back-quotes. Also, is &lt; a < or `<` or a raw character reference?
+ * What about &amp;lt; and `&lt;`?
  *
  * ## Usage
  *
