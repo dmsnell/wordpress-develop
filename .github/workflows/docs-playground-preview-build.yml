@@ -13,6 +13,28 @@ on:
 permissions: {}
 
 jobs:
+  diagnose-staging-eligibility:
+    name: Diagnose staging eligibility
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    permissions: {}
+    env:
+      REPOSITORY_ALLOWED: ${{ github.repository == 'WordPress/wordpress-develop' || github.repository == 'sirreal/wordpress-develop' }}
+      STAGING_ENABLED: ${{ vars.DOCS_PREVIEW_STAGING == 'true' }}
+      BASE_IS_TRUNK: ${{ github.event.pull_request.base.ref == 'trunk' }}
+      PR_IS_OPEN: ${{ github.event.pull_request.state == 'open' }}
+      LABEL_REQUESTED: ${{ github.event.action == 'labeled' && github.event.label.name == 'docs-preview' }}
+      SYNCHRONIZE_REQUESTED: ${{ github.event.action == 'synchronize' && contains( github.event.pull_request.labels.*.name, 'docs-preview' ) }}
+    steps:
+      - name: Report boolean eligibility terms
+        run: |
+          printenv REPOSITORY_ALLOWED
+          printenv STAGING_ENABLED
+          printenv BASE_IS_TRUNK
+          printenv PR_IS_OPEN
+          printenv LABEL_REQUESTED
+          printenv SYNCHRONIZE_REQUESTED
+
   build:
     name: Build Code Reference snapshot
     if: >-
