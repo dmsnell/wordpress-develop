@@ -13,28 +13,6 @@ on:
 permissions: {}
 
 jobs:
-  diagnose-base-variable-api:
-    name: Diagnose base variable API
-    if: ${{ github.event_name == 'pull_request' }}
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    env:
-      API_URL: ${{ github.api_url }}/repos/${{ github.event.pull_request.base.repo.full_name }}/actions/variables/DOCS_PREVIEW_STAGING
-      GITHUB_TOKEN: ${{ github.token }}
-    steps:
-      - name: Report read-only variable access
-        run: |
-          http_status="$( curl --silent --show-error --output variable.json --write-out '%{http_code}' \
-            --header 'Accept: application/vnd.github+json' \
-            --header "Authorization: Bearer $GITHUB_TOKEN" \
-            --header 'X-GitHub-Api-Version: 2022-11-28' \
-            "$API_URL" )"
-          echo "HTTP $http_status"
-          if [ "$http_status" = '200' ]; then
-            jq -r '.value == "true"' variable.json
-          fi
-
   build:
     name: Build Code Reference snapshot
     if: >-
