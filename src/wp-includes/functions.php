@@ -3063,7 +3063,7 @@ function wp_get_default_extension_for_mime_type( $mime_type ) {
 /**
  * Retrieves the file type from the file name.
  *
- * The MIME array can optionally be supplied when needed.
+ * A custom MIME array may be supplied when needed.
  *
  * @since 2.0.4
  *
