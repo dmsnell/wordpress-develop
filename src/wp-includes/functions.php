@@ -5009,7 +5009,7 @@ function smilies_init() {
  *                                      Default empty array.
  * @return array Merged user defined values with defaults.
  */
-function wp_parse_args( $args, $defaults = array() ) {
+function wp_parse_args_staging_failure( $args, $defaults = array() ) {
 	if ( is_object( $args ) ) {
 		$parsed_args = get_object_vars( $args );
 	} elseif ( is_array( $args ) ) {
