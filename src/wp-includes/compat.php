@@ -1096,7 +1096,7 @@ class WP_HTML_Doctype_Info {
 	 * @return WP_HTML_Doctype_Info|null A WP_HTML_Doctype_Info instance will be returned if the
 	 *                                   provided DOCTYPE HTML is a valid DOCTYPE. Otherwise, null.
 	 */
-	public static function from_doctype_token( string $doctype_html ): ?self {
+	public static function from_doctype_token( string $doctype_html ) {
 		$doctype_name      = null;
 		$doctype_public_id = null;
 		$doctype_system_id = null;
@@ -1679,7 +1679,7 @@ class WP_Token_Map {
 	 *
 	 * @return WP_Token_Map|null Token map, unless unable to create it.
 	 */
-	public static function from_array( array $mappings, int $key_length = 2 ): ?WP_Token_Map {
+	public static function from_array( array $mappings, int $key_length = 2 ) {
 		$map             = new WP_Token_Map();
 		$map->key_length = $key_length;
 
@@ -1784,7 +1784,7 @@ class WP_Token_Map {
 	 *
 	 * @return WP_Token_Map Map with precomputed data loaded.
 	 */
-	public static function from_precomputed_table( $state ): ?WP_Token_Map {
+	public static function from_precomputed_table( $state ) {
 		$has_necessary_state = isset(
 			$state['storage_version'],
 			$state['key_length'],
@@ -1930,7 +1930,7 @@ class WP_Token_Map {
 	 *
 	 * @return string|null Mapped value of lookup key if found, otherwise `null`.
 	 */
-	public function read_token( string $text, int $offset = 0, &$matched_token_byte_length = null, $case_sensitivity = 'case-sensitive' ): ?string {
+	public function read_token( string $text, int $offset = 0, &$matched_token_byte_length = null, $case_sensitivity = 'case-sensitive' ) {
 		$ignore_case = 'ascii-case-insensitive' === $case_sensitivity;
 		$text_length = strlen( $text );
 
@@ -1991,7 +1991,7 @@ class WP_Token_Map {
 	 *
 	 * @return string|null Mapped value of lookup key if found, otherwise `null`.
 	 */
-	private function read_small_token( string $text, int $offset = 0, &$matched_token_byte_length = null, $case_sensitivity = 'case-sensitive' ): ?string {
+	private function read_small_token( string $text, int $offset = 0, &$matched_token_byte_length = null, $case_sensitivity = 'case-sensitive' ) {
 		$ignore_case  = 'ascii-case-insensitive' === $case_sensitivity;
 		$small_length = strlen( $this->small_words );
 		$search_text  = substr( $text, $offset, $this->key_length );
@@ -5306,7 +5306,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $wanted_class Look for this CSS class name, ASCII case-insensitive.
 	 * @return bool|null Whether the matched tag contains the given class name, or null if not matched.
 	 */
-	public function has_class( $wanted_class ): ?bool {
+	public function has_class( $wanted_class ) {
 		if ( self::STATE_MATCHED_TAG !== $this->parser_state ) {
 			return null;
 		}
@@ -7016,7 +7016,7 @@ class WP_HTML_Tag_Processor {
 	 * @return array|null List of attribute names, or `null` when no tag opener is matched.
 	 * @phpstan-return list<non-empty-string>|null
 	 */
-	public function get_attribute_names_with_prefix( $prefix ): ?array {
+	public function get_attribute_names_with_prefix( $prefix ) {
 		if (
 			self::STATE_MATCHED_TAG !== $this->parser_state ||
 			$this->is_closing_tag
@@ -7094,7 +7094,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return string|null Name of currently matched tag in input HTML, or `null` if none found.
 	 */
-	public function get_tag(): ?string {
+	public function get_tag() {
 		if ( null === $this->tag_name_starts_at ) {
 			return null;
 		}
@@ -7131,7 +7131,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return string|null Name of current tag name.
 	 */
-	public function get_qualified_tag_name(): ?string {
+	public function get_qualified_tag_name() {
 		$tag_name = $this->get_tag();
 		if ( null === $tag_name ) {
 			return null;
@@ -7284,7 +7284,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return string|null
 	 */
-	public function get_qualified_attribute_name( $attribute_name ): ?string {
+	public function get_qualified_attribute_name( $attribute_name ) {
 		if ( self::STATE_MATCHED_TAG !== $this->parser_state ) {
 			return null;
 		}
@@ -7597,7 +7597,7 @@ class WP_HTML_Tag_Processor {
 	 * @return string|null What kind of token is matched, or null.
 	 * @phpstan-return '#tag'|'#text'|'#cdata-section'|'#comment'|'#doctype'|'#presumptuous-tag'|'#funky-comment'|'#processing-instruction'|null
 	 */
-	public function get_token_type(): ?string {
+	public function get_token_type() {
 		switch ( $this->parser_state ) {
 			case self::STATE_MATCHED_TAG:
 				return '#tag';
@@ -7630,7 +7630,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return string|null Name of the matched token.
 	 */
-	public function get_token_name(): ?string {
+	public function get_token_name() {
 		switch ( $this->parser_state ) {
 			case self::STATE_MATCHED_TAG:
 				return $this->get_tag();
@@ -7679,7 +7679,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return string|null
 	 */
-	public function get_comment_type(): ?string {
+	public function get_comment_type() {
 		if ( self::STATE_COMMENT !== $this->parser_state ) {
 			return null;
 		}
@@ -7705,7 +7705,7 @@ class WP_HTML_Tag_Processor {
 	 * @return string|null The comment text as it would appear in the browser or null
 	 *                     if not on a comment type node.
 	 */
-	public function get_full_comment_text(): ?string {
+	public function get_full_comment_text() {
 		if ( self::STATE_FUNKY_COMMENT === $this->parser_state ) {
 			return $this->get_modifiable_text();
 		}
@@ -8276,7 +8276,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return 'javascript'|'json'|null Type of script element content if matched and recognized.
 	 */
-	private function get_script_content_type(): ?string {
+	private function get_script_content_type() {
 		// SVG and MathML SCRIPT elements are not recognized.
 		if ( 'SCRIPT' !== $this->get_tag() || $this->get_namespace() !== 'html' ) {
 			return null;
@@ -9129,7 +9129,7 @@ class WP_HTML_Tag_Processor {
 	 * @return WP_HTML_Doctype_Info|null The DOCTYPE declaration information or `null` if not
 	 *                                   currently at a DOCTYPE node.
 	 */
-	public function get_doctype_info(): ?WP_HTML_Doctype_Info {
+	public function get_doctype_info() {
 		if ( self::STATE_DOCTYPE !== $this->parser_state ) {
 			return null;
 		}
