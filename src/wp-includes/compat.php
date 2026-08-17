@@ -3734,7 +3734,7 @@ class WP_HTML_Decoder {
 	 * @return string Decoded UTF-8 value of given text node.
 	 */
 	public static function decode_text_node( $text ) {
-		return static::decode( 'data', $text );
+		return WP_HTML_Decoder::decode( 'data', $text );
 	}
 
 	/**
@@ -3754,7 +3754,7 @@ class WP_HTML_Decoder {
 	 * @return string Decoded UTF-8 value of given attribute value.
 	 */
 	public static function decode_attribute( $text ) {
-		return static::decode( 'attribute', $text );
+		return WP_HTML_Decoder::decode( 'attribute', $text );
 	}
 
 	/**
@@ -5474,7 +5474,7 @@ class WP_HTML_Tag_Processor {
 			return false;
 		}
 
-		if ( ! array_key_exists( $name, $this->bookmarks ) && count( $this->bookmarks ) >= static::MAX_BOOKMARKS ) {
+		if ( ! array_key_exists( $name, $this->bookmarks ) && count( $this->bookmarks ) >= WP_HTML_Tag_Processor::MAX_BOOKMARKS ) {
 			_doing_it_wrong(
 				__METHOD__,
 				__( 'Too many bookmarks: cannot create any more.' ),
@@ -6841,7 +6841,7 @@ class WP_HTML_Tag_Processor {
 			return true;
 		}
 
-		if ( ++$this->seek_count > static::MAX_SEEK_OPS ) {
+		if ( ++$this->seek_count > WP_HTML_Tag_Processor::MAX_SEEK_OPS ) {
 			_doing_it_wrong(
 				__METHOD__,
 				__( 'Too many calls to seek() - this can lead to performance issues.' ),
