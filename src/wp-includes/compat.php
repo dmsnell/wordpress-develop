@@ -866,7 +866,7 @@ class WP_HTML_Doctype_Info {
 		$name,
 		$public_identifier,
 		$system_identifier,
-		bool $force_quirks_flag
+		$force_quirks_flag
 	) {
 		$this->name              = $name;
 		$this->public_identifier = $public_identifier;
@@ -1096,7 +1096,7 @@ class WP_HTML_Doctype_Info {
 	 * @return WP_HTML_Doctype_Info|null A WP_HTML_Doctype_Info instance will be returned if the
 	 *                                   provided DOCTYPE HTML is a valid DOCTYPE. Otherwise, null.
 	 */
-	public static function from_doctype_token( string $doctype_html ) {
+	public static function from_doctype_token( $doctype_html ) {
 		$doctype_name      = null;
 		$doctype_public_id = null;
 		$doctype_system_id = null;
@@ -1679,7 +1679,7 @@ class WP_Token_Map {
 	 *
 	 * @return WP_Token_Map|null Token map, unless unable to create it.
 	 */
-	public static function from_array( array $mappings, int $key_length = 2 ) {
+	public static function from_array( array $mappings, $key_length = 2 ) {
 		$map             = new WP_Token_Map();
 		$map->key_length = $key_length;
 
@@ -1838,7 +1838,7 @@ class WP_Token_Map {
 	 * @param string $case_sensitivity Optional. Pass 'ascii-case-insensitive' to ignore ASCII case when matching. Default 'case-sensitive'.
 	 * @return bool Whether there's an entry for the given word in the map.
 	 */
-	public function contains( string $word, string $case_sensitivity = 'case-sensitive' ) {
+	public function contains( $word, $case_sensitivity = 'case-sensitive' ) {
 		if ( str_contains( $word, "\x00" ) ) {
 			return false;
 		}
@@ -1930,7 +1930,7 @@ class WP_Token_Map {
 	 *
 	 * @return string|null Mapped value of lookup key if found, otherwise `null`.
 	 */
-	public function read_token( string $text, int $offset = 0, &$matched_token_byte_length = null, $case_sensitivity = 'case-sensitive' ) {
+	public function read_token( $text, $offset = 0, &$matched_token_byte_length = null, $case_sensitivity = 'case-sensitive' ) {
 		$ignore_case = 'ascii-case-insensitive' === $case_sensitivity;
 		$text_length = strlen( $text );
 
@@ -1991,7 +1991,7 @@ class WP_Token_Map {
 	 *
 	 * @return string|null Mapped value of lookup key if found, otherwise `null`.
 	 */
-	private function read_small_token( string $text, int $offset = 0, &$matched_token_byte_length = null, $case_sensitivity = 'case-sensitive' ) {
+	private function read_small_token( $text, $offset = 0, &$matched_token_byte_length = null, $case_sensitivity = 'case-sensitive' ) {
 		$ignore_case  = 'ascii-case-insensitive' === $case_sensitivity;
 		$small_length = strlen( $this->small_words );
 		$search_text  = substr( $text, $offset, $this->key_length );
@@ -2108,7 +2108,7 @@ class WP_Token_Map {
 	 * @param string $indent Optional. Use this string for indentation, or rely on the default horizontal tab character. Default "\t".
 	 * @return string Value which can be pasted into a PHP source file for quick loading of table.
 	 */
-	public function precomputed_php_source_table( string $indent = "\t" ) {
+	public function precomputed_php_source_table( $indent = "\t" ) {
 		$i1 = $indent;
 		$i2 = $i1 . $indent;
 		$i3 = $i2 . $indent;
@@ -2213,7 +2213,7 @@ class WP_Token_Map {
 	 * @param string $b Second string to compare.
 	 * @return int -1 or lower if `$a` is less than `$b`; 1 or greater if `$a` is greater than `$b`, and 0 if they are equal.
 	 */
-	private static function longest_first_then_alphabetical( string $a, string $b ) {
+	private static function longest_first_then_alphabetical( $a, $b ) {
 		if ( $a === $b ) {
 			return 0;
 		}
@@ -4923,7 +4923,7 @@ class WP_HTML_Tag_Processor {
 	 *                              namespace the next tokens will be processed.
 	 * @return bool Whether the namespace was valid and changed.
 	 */
-	public function change_parsing_namespace( string $new_namespace ) {
+	public function change_parsing_namespace( $new_namespace ) {
 		if ( ! in_array( $new_namespace, array( 'html', 'math', 'svg' ), true ) ) {
 			return false;
 		}
@@ -5461,7 +5461,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $tag_name The uppercase tag name which will close the RAWTEXT region.
 	 * @return bool Whether an end to the RAWTEXT region was found before the end of the document.
 	 */
-	private function skip_rawtext( string $tag_name ) {
+	private function skip_rawtext( $tag_name ) {
 		/*
 		 * These two functions distinguish themselves on whether character references are
 		 * decoded, and since functionality to read the inner markup isn't supported, it's
@@ -5481,7 +5481,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $tag_name The uppercase tag name which will close the RCDATA region.
 	 * @return bool Whether an end to the RCDATA region was found before the end of the document.
 	 */
-	private function skip_rcdata( string $tag_name ) {
+	private function skip_rcdata( $tag_name ) {
 		$html       = $this->html;
 		$doc_length = strlen( $html );
 		$tag_length = strlen( $tag_name );
@@ -6652,7 +6652,7 @@ class WP_HTML_Tag_Processor {
 	 * @param int $shift_this_point Accumulate and return shift for this position.
 	 * @return int How many bytes the given pointer moved in response to the updates.
 	 */
-	private function apply_attributes_updates( int $shift_this_point ) {
+	private function apply_attributes_updates( $shift_this_point ) {
 		if ( ! count( $this->lexical_updates ) ) {
 			return 0;
 		}
@@ -6844,7 +6844,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $comparable_name The attribute name in its comparable form.
 	 * @return string|boolean|null Value of enqueued update if present, otherwise false.
 	 */
-	private function get_enqueued_attribute_value( string $comparable_name ) {
+	private function get_enqueued_attribute_value( $comparable_name ) {
 		if ( self::STATE_MATCHED_TAG !== $this->parser_state ) {
 			return false;
 		}
@@ -8012,7 +8012,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $plaintext_content New text content to represent in the matched token.
 	 * @return bool Whether the text was able to update.
 	 */
-	public function set_modifiable_text( string $plaintext_content ) {
+	public function set_modifiable_text( $plaintext_content ) {
 		if ( self::STATE_TEXT_NODE === $this->parser_state ) {
 			$this->lexical_updates['modifiable text'] = new WP_HTML_Text_Replacement(
 				$this->text_starts_at,
@@ -8551,7 +8551,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $sourcecode Raw contents intended to be serialized into an HTML SCRIPT element.
 	 * @return string Escaped form of input contents which will not lead to premature closing of the containing SCRIPT element.
 	 */
-	private static function escape_javascript_script_contents( string $sourcecode ) {
+	private static function escape_javascript_script_contents( $sourcecode ) {
 		$at      = 0;
 		$was_at  = 0;
 		$end     = strlen( $sourcecode );
