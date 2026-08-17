@@ -9103,7 +9103,7 @@ class WP_HTML_Tag_Processor {
 			$tag_name = $this->get_tag();
 			if (
 				strlen( $this->sought_tag_name ) !== strlen( $tag_name ) ||
-				0 !== substr_compare( $tag_name, $this->sought_tag_name, 0, null, true )
+				0 !== substr_compare( $tag_name, $this->sought_tag_name, 0, strlen( $tag_name ), true )
 			) {
 				return false;
 			}
