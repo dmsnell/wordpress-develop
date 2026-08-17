@@ -1171,7 +1171,7 @@ class WP_HTML_Doctype_Info {
 		}
 
 		$name_length  = strcspn( $doctype_html, " \t\n\f\r", $at, $end - $at );
-		$doctype_name = str_replace( "\0", "\u{FFFD}", strtolower( substr( $doctype_html, $at, $name_length ) ) );
+		$doctype_name = str_replace( "\0", "\xEF\xBF\xBD", strtolower( substr( $doctype_html, $at, $name_length ) ) );
 
 		$at += $name_length;
 		$at += strspn( $doctype_html, " \t\n\f\r", $at, $end - $at );
@@ -1248,7 +1248,7 @@ class WP_HTML_Doctype_Info {
 		++$at;
 
 		$identifier_length = strcspn( $doctype_html, $closer_quote, $at, $end - $at );
-		$doctype_public_id = str_replace( "\0", "\u{FFFD}", substr( $doctype_html, $at, $identifier_length ) );
+		$doctype_public_id = str_replace( "\0", "\xEF\xBF\xBD", substr( $doctype_html, $at, $identifier_length ) );
 
 		$at += $identifier_length;
 		if ( $at >= $end || $closer_quote !== $doctype_html[ $at ] ) {
@@ -1291,7 +1291,7 @@ class WP_HTML_Doctype_Info {
 		++$at;
 
 		$identifier_length = strcspn( $doctype_html, $closer_quote, $at, $end - $at );
-		$doctype_system_id = str_replace( "\0", "\u{FFFD}", substr( $doctype_html, $at, $identifier_length ) );
+		$doctype_system_id = str_replace( "\0", "\xEF\xBF\xBD", substr( $doctype_html, $at, $identifier_length ) );
 
 		$at += $identifier_length;
 		if ( $at >= $end || $closer_quote !== $doctype_html[ $at ] ) {
@@ -6378,7 +6378,7 @@ class WP_HTML_Tag_Processor {
 		 *
 		 * @see https://html.spec.whatwg.org/#attribute-name-state
 		 */
-		$comparable_name = strtolower( str_replace( "\x00", "\u{FFFD}", $attribute_name ) );
+		$comparable_name = strtolower( str_replace( "\x00", "\xEF\xBF\xBD", $attribute_name ) );
 
 		// If an attribute is listed many times, only use the first declaration and ignore the rest.
 		if ( ! isset( $this->attributes[ $comparable_name ] ) ) {
@@ -6985,7 +6985,7 @@ class WP_HTML_Tag_Processor {
 		$raw_value = substr( $this->html, $attribute->value_starts_at, $attribute->value_length );
 		$raw_value = str_replace( "\r\n", "\n", $raw_value );
 		$raw_value = str_replace( "\r", "\n", $raw_value );
-		$raw_value = str_replace( "\x00", "\u{FFFD}", $raw_value );
+		$raw_value = str_replace( "\x00", "\xEF\xBF\xBD", $raw_value );
 		return WP_HTML_Decoder::decode_attribute( $raw_value );
 	}
 
@@ -7099,7 +7099,7 @@ class WP_HTML_Tag_Processor {
 			return null;
 		}
 
-		$tag_name = str_replace( "\x00", "\u{FFFD}", substr( $this->html, $this->tag_name_starts_at, $this->tag_name_length ) );
+		$tag_name = str_replace( "\x00", "\xEF\xBF\xBD", substr( $this->html, $this->tag_name_starts_at, $this->tag_name_length ) );
 
 		if ( self::STATE_MATCHED_TAG === $this->parser_state ) {
 			return strtoupper( $tag_name );
@@ -7898,7 +7898,7 @@ class WP_HTML_Tag_Processor {
 			self::STATE_FUNKY_COMMENT === $this->parser_state ||
 			self::STATE_PROCESSING_INSTRUCTION === $this->parser_state
 		) {
-			return str_replace( "\x00", "\u{FFFD}", $text );
+			return str_replace( "\x00", "\xEF\xBF\xBD", $text );
 		}
 
 		$tag_name = $this->get_token_name();
@@ -7913,7 +7913,7 @@ class WP_HTML_Tag_Processor {
 			'STYLE' === $tag_name ||
 			'XMP' === $tag_name
 		) {
-			return str_replace( "\x00", "\u{FFFD}", $text );
+			return str_replace( "\x00", "\xEF\xBF\xBD", $text );
 		}
 
 		$decoded = WP_HTML_Decoder::decode_text_node( $text );
@@ -7944,7 +7944,7 @@ class WP_HTML_Tag_Processor {
 		 */
 		return ( '#text' === $tag_name && 'html' === $this->get_namespace() )
 			? str_replace( "\x00", '', $decoded )
-			: str_replace( "\x00", "\u{FFFD}", $decoded );
+			: str_replace( "\x00", "\xEF\xBF\xBD", $decoded );
 	}
 
 	/**
