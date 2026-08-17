@@ -954,61 +954,61 @@ class WP_HTML_Doctype_Info {
 		 *       and normative documents will have exited before reaching this condition.
 		 */
 		if (
-			str_starts_with( $public_identifier, '+//silmaril//dtd html pro v0r11 19970101//' ) ||
-			str_starts_with( $public_identifier, '-//as//dtd html 3.0 aswedit + extensions//' ) ||
-			str_starts_with( $public_identifier, '-//advasoft ltd//dtd html 3.0 aswedit + extensions//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html 2.0 level 1//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html 2.0 level 2//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html 2.0 strict level 1//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html 2.0 strict level 2//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html 2.0 strict//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html 2.0//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html 2.1e//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html 3.0//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html 3.2 final//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html 3.2//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html 3//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html level 0//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html level 1//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html level 2//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html level 3//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html strict level 0//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html strict level 1//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html strict level 2//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html strict level 3//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html strict//' ) ||
-			str_starts_with( $public_identifier, '-//ietf//dtd html//' ) ||
-			str_starts_with( $public_identifier, '-//metrius//dtd metrius presentational//' ) ||
-			str_starts_with( $public_identifier, '-//microsoft//dtd internet explorer 2.0 html strict//' ) ||
-			str_starts_with( $public_identifier, '-//microsoft//dtd internet explorer 2.0 html//' ) ||
-			str_starts_with( $public_identifier, '-//microsoft//dtd internet explorer 2.0 tables//' ) ||
-			str_starts_with( $public_identifier, '-//microsoft//dtd internet explorer 3.0 html strict//' ) ||
-			str_starts_with( $public_identifier, '-//microsoft//dtd internet explorer 3.0 html//' ) ||
-			str_starts_with( $public_identifier, '-//microsoft//dtd internet explorer 3.0 tables//' ) ||
-			str_starts_with( $public_identifier, '-//netscape comm. corp.//dtd html//' ) ||
-			str_starts_with( $public_identifier, '-//netscape comm. corp.//dtd strict html//' ) ||
-			str_starts_with( $public_identifier, "-//o'reilly and associates//dtd html 2.0//" ) ||
-			str_starts_with( $public_identifier, "-//o'reilly and associates//dtd html extended 1.0//" ) ||
-			str_starts_with( $public_identifier, "-//o'reilly and associates//dtd html extended relaxed 1.0//" ) ||
-			str_starts_with( $public_identifier, '-//sq//dtd html 2.0 hotmetal + extensions//' ) ||
-			str_starts_with( $public_identifier, '-//softquad software//dtd hotmetal pro 6.0::19990601::extensions to html 4.0//' ) ||
-			str_starts_with( $public_identifier, '-//softquad//dtd hotmetal pro 4.0::19971010::extensions to html 4.0//' ) ||
-			str_starts_with( $public_identifier, '-//spyglass//dtd html 2.0 extended//' ) ||
-			str_starts_with( $public_identifier, '-//sun microsystems corp.//dtd hotjava html//' ) ||
-			str_starts_with( $public_identifier, '-//sun microsystems corp.//dtd hotjava strict html//' ) ||
-			str_starts_with( $public_identifier, '-//w3c//dtd html 3 1995-03-24//' ) ||
-			str_starts_with( $public_identifier, '-//w3c//dtd html 3.2 draft//' ) ||
-			str_starts_with( $public_identifier, '-//w3c//dtd html 3.2 final//' ) ||
-			str_starts_with( $public_identifier, '-//w3c//dtd html 3.2//' ) ||
-			str_starts_with( $public_identifier, '-//w3c//dtd html 3.2s draft//' ) ||
-			str_starts_with( $public_identifier, '-//w3c//dtd html 4.0 frameset//' ) ||
-			str_starts_with( $public_identifier, '-//w3c//dtd html 4.0 transitional//' ) ||
-			str_starts_with( $public_identifier, '-//w3c//dtd html experimental 19960712//' ) ||
-			str_starts_with( $public_identifier, '-//w3c//dtd html experimental 970421//' ) ||
-			str_starts_with( $public_identifier, '-//w3c//dtd w3 html//' ) ||
-			str_starts_with( $public_identifier, '-//w3o//dtd w3 html 3.0//' ) ||
-			str_starts_with( $public_identifier, '-//webtechs//dtd mozilla html 2.0//' ) ||
-			str_starts_with( $public_identifier, '-//webtechs//dtd mozilla html//' )
+			0 === strncmp( $public_identifier, '+//silmaril//dtd html pro v0r11 19970101//', 42 ) ||
+			0 === strncmp( $public_identifier, '-//as//dtd html 3.0 aswedit + extensions//', 42 ) ||
+			0 === strncmp( $public_identifier, '-//advasoft ltd//dtd html 3.0 aswedit + extensions//', 52 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html 2.0 level 1//', 31 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html 2.0 level 2//', 31 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html 2.0 strict level 1//', 38 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html 2.0 strict level 2//', 38 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html 2.0 strict//', 30 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html 2.0//', 23 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html 2.1e//', 24 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html 3.0//', 23 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html 3.2 final//', 29 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html 3.2//', 23 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html 3//', 21 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html level 0//', 27 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html level 1//', 27 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html level 2//', 27 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html level 3//', 27 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html strict level 0//', 34 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html strict level 1//', 34 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html strict level 2//', 34 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html strict level 3//', 34 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html strict//', 26 ) ||
+			0 === strncmp( $public_identifier, '-//ietf//dtd html//', 19 ) ||
+			0 === strncmp( $public_identifier, '-//metrius//dtd metrius presentational//', 40 ) ||
+			0 === strncmp( $public_identifier, '-//microsoft//dtd internet explorer 2.0 html strict//', 53 ) ||
+			0 === strncmp( $public_identifier, '-//microsoft//dtd internet explorer 2.0 html//', 46 ) ||
+			0 === strncmp( $public_identifier, '-//microsoft//dtd internet explorer 2.0 tables//', 48 ) ||
+			0 === strncmp( $public_identifier, '-//microsoft//dtd internet explorer 3.0 html strict//', 53 ) ||
+			0 === strncmp( $public_identifier, '-//microsoft//dtd internet explorer 3.0 html//', 46 ) ||
+			0 === strncmp( $public_identifier, '-//microsoft//dtd internet explorer 3.0 tables//', 48 ) ||
+			0 === strncmp( $public_identifier, '-//netscape comm. corp.//dtd html//', 35 ) ||
+			0 === strncmp( $public_identifier, '-//netscape comm. corp.//dtd strict html//', 42 ) ||
+			0 === strncmp( $public_identifier, "-//o'reilly and associates//dtd html 2.0//", 42 ) ||
+			0 === strncmp( $public_identifier, "-//o'reilly and associates//dtd html extended 1.0//", 51 ) ||
+			0 === strncmp( $public_identifier, "-//o'reilly and associates//dtd html extended relaxed 1.0//", 59 ) ||
+			0 === strncmp( $public_identifier, '-//sq//dtd html 2.0 hotmetal + extensions//', 43 ) ||
+			0 === strncmp( $public_identifier, '-//softquad software//dtd hotmetal pro 6.0::19990601::extensions to html 4.0//', 78 ) ||
+			0 === strncmp( $public_identifier, '-//softquad//dtd hotmetal pro 4.0::19971010::extensions to html 4.0//', 69 ) ||
+			0 === strncmp( $public_identifier, '-//spyglass//dtd html 2.0 extended//', 36 ) ||
+			0 === strncmp( $public_identifier, '-//sun microsystems corp.//dtd hotjava html//', 45 ) ||
+			0 === strncmp( $public_identifier, '-//sun microsystems corp.//dtd hotjava strict html//', 52 ) ||
+			0 === strncmp( $public_identifier, '-//w3c//dtd html 3 1995-03-24//', 31 ) ||
+			0 === strncmp( $public_identifier, '-//w3c//dtd html 3.2 draft//', 28 ) ||
+			0 === strncmp( $public_identifier, '-//w3c//dtd html 3.2 final//', 28 ) ||
+			0 === strncmp( $public_identifier, '-//w3c//dtd html 3.2//', 22 ) ||
+			0 === strncmp( $public_identifier, '-//w3c//dtd html 3.2s draft//', 29 ) ||
+			0 === strncmp( $public_identifier, '-//w3c//dtd html 4.0 frameset//', 31 ) ||
+			0 === strncmp( $public_identifier, '-//w3c//dtd html 4.0 transitional//', 35 ) ||
+			0 === strncmp( $public_identifier, '-//w3c//dtd html experimental 19960712//', 40 ) ||
+			0 === strncmp( $public_identifier, '-//w3c//dtd html experimental 970421//', 38 ) ||
+			0 === strncmp( $public_identifier, '-//w3c//dtd w3 html//', 21 ) ||
+			0 === strncmp( $public_identifier, '-//w3o//dtd w3 html 3.0//', 25 ) ||
+			0 === strncmp( $public_identifier, '-//webtechs//dtd mozilla html 2.0//', 35 ) ||
+			0 === strncmp( $public_identifier, '-//webtechs//dtd mozilla html//', 31 )
 		) {
 			$this->indicated_compatibility_mode = 'quirks';
 			return;
@@ -1020,8 +1020,8 @@ class WP_HTML_Doctype_Info {
 		 */
 		if (
 			'' === $system_identifier && (
-				str_starts_with( $public_identifier, '-//w3c//dtd html 4.01 frameset//' ) ||
-				str_starts_with( $public_identifier, '-//w3c//dtd html 4.01 transitional//' )
+				0 === strncmp( $public_identifier, '-//w3c//dtd html 4.01 frameset//', 32 ) ||
+				0 === strncmp( $public_identifier, '-//w3c//dtd html 4.01 transitional//', 36 )
 			)
 		) {
 			$this->indicated_compatibility_mode = 'quirks';
@@ -1037,8 +1037,8 @@ class WP_HTML_Doctype_Info {
 		 * > The public identifier starts with…
 		 */
 		if (
-			str_starts_with( $public_identifier, '-//w3c//dtd xhtml 1.0 frameset//' ) ||
-			str_starts_with( $public_identifier, '-//w3c//dtd xhtml 1.0 transitional//' )
+			0 === strncmp( $public_identifier, '-//w3c//dtd xhtml 1.0 frameset//', 32 ) ||
+			0 === strncmp( $public_identifier, '-//w3c//dtd xhtml 1.0 transitional//', 36 )
 		) {
 			$this->indicated_compatibility_mode = 'limited-quirks';
 			return;
@@ -1050,8 +1050,8 @@ class WP_HTML_Doctype_Info {
 		 */
 		if (
 			'' !== $system_identifier && (
-				str_starts_with( $public_identifier, '-//w3c//dtd html 4.01 frameset//' ) ||
-				str_starts_with( $public_identifier, '-//w3c//dtd html 4.01 transitional//' )
+				0 === strncmp( $public_identifier, '-//w3c//dtd html 4.01 frameset//', 32 ) ||
+				0 === strncmp( $public_identifier, '-//w3c//dtd html 4.01 transitional//', 36 )
 			)
 		) {
 			$this->indicated_compatibility_mode = 'limited-quirks';
@@ -7089,14 +7089,15 @@ class WP_HTML_Tag_Processor {
 			return null;
 		}
 
-		$comparable = strtolower( $prefix );
+		$comparable        = strtolower( $prefix );
+		$comparable_length = strlen( $prefix );
 
 		/*
 		 * For the `class` attribute, ensure that enqueued class changes from
 		 * `add_class` and `remove_class` are flushed into attribute updates.
 		 */
 		$has_class = isset( $this->attributes['class'] );
-		if ( '' === $comparable || str_starts_with( 'class', $comparable ) ) {
+		if ( '' === $comparable || 0 === strncmp( 'class', $comparable, $comparable_length ) ) {
 			foreach ( $this->classname_updates as $update ) {
 				if (
 					( $has_class && self::REMOVE_CLASS === $update ) ||
@@ -7117,14 +7118,14 @@ class WP_HTML_Tag_Processor {
 
 			if ( '' === $update->text ) {
 				$removals[ $update_name ] = true;
-			} elseif ( ! isset( $this->attributes[ $update_name ] ) && str_starts_with( $update_name, $comparable ) ) {
+			} elseif ( ! isset( $this->attributes[ $update_name ] ) && 0 === strncmp( $update_name, $comparable, $comparable_length ) ) {
 				$additions[] = $update_name;
 			}
 		}
 
 		$matches = array();
 		foreach ( array_keys( $this->attributes ) as $attr_name ) {
-			if ( str_starts_with( $attr_name, $comparable ) && ! isset( $removals[ $attr_name ] ) ) {
+			if ( 0 === strncmp( $attr_name, $comparable, $comparable_length ) && ! isset( $removals[ $attr_name ] ) ) {
 				$matches[] = $attr_name;
 			}
 		}
