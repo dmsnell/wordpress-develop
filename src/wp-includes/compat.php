@@ -1727,9 +1727,7 @@ class WP_Token_Map {
 		foreach ( $groups as $group_key => $group ) {
 			usort(
 				$groups[ $group_key ],
-				static function ( array $a, array $b ) {
-					return self::longest_first_then_alphabetical( $a[0], $b[0] );
-				}
+				'WP_Token_Map::longest_first_then_alphabetical_first_items'
 			);
 		}
 
@@ -2214,6 +2212,40 @@ class WP_Token_Map {
 	 * @return int -1 or lower if `$a` is less than `$b`; 1 or greater if `$a` is greater than `$b`, and 0 if they are equal.
 	 */
 	private static function longest_first_then_alphabetical( $a, $b ) {
+		if ( $a === $b ) {
+			return 0;
+		}
+
+		$length_a = strlen( $a );
+		$length_b = strlen( $b );
+
+		// Longer strings are less-than for comparison's sake.
+		if ( $length_a !== $length_b ) {
+			return $length_b - $length_a;
+		}
+
+		return strcmp( $a, $b );
+	}
+
+	/**
+	 * Compares first string items of two arrays, returning the longest, or whichever
+	 * is first alphabetically if they are the same length.
+	 *
+	 * This is an important sort when building the token map because
+	 * it should not form a match on a substring of a longer potential
+	 * match. For example, it should not detect `Cap` when matching
+	 * against the string `CapitalDifferentialD`.
+	 *
+	 * @ignore
+	 *
+	 * @param array $a Contains first string to compare.
+	 * @param array $b Contains second string to compare.
+	 * @return int -1 or lower if `$a` is less than `$b`; 1 or greater if `$a` is greater than `$b`, and 0 if they are equal.
+	 */
+	private static function longest_first_then_alphabetical_first_items( $a, $b ) {
+		$a = $a[0];
+		$b = $b[0];
+
 		if ( $a === $b ) {
 			return 0;
 		}
