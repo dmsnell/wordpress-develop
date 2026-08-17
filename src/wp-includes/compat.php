@@ -863,9 +863,9 @@ class WP_HTML_Doctype_Info {
 	 * @param bool        $force_quirks_flag Whether the force-quirks flag is set for the token.
 	 */
 	private function __construct(
-		?string $name,
-		?string $public_identifier,
-		?string $system_identifier,
+		$name,
+		$public_identifier,
+		$system_identifier,
 		bool $force_quirks_flag
 	) {
 		$this->name              = $name;
