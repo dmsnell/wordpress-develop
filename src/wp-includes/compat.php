@@ -5245,7 +5245,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @since 6.4.0
 	 *
-	 * @return Generator<int, non-empty-string>
+	 * @return string[]|null
 	 */
 	public function class_list() {
 		if ( self::STATE_MATCHED_TAG !== $this->parser_state ) {
@@ -5293,8 +5293,9 @@ class WP_HTML_Tag_Processor {
 			}
 
 			$seen[] = $name;
-			yield $name;
 		}
+
+		return $seen;
 	}
 
 
@@ -5314,12 +5315,15 @@ class WP_HTML_Tag_Processor {
 		$case_insensitive = self::QUIRKS_MODE === $this->compat_mode;
 
 		$wanted_length = strlen( $wanted_class );
-		foreach ( $this->class_list() as $class_name ) {
-			if (
-				strlen( $class_name ) === $wanted_length &&
-				0 === substr_compare( $class_name, $wanted_class, 0, strlen( $wanted_class ), $case_insensitive )
-			) {
-				return true;
+		$class_list    = $this->class_list();
+		if ( is_array( $class_list ) ) {
+			foreach ( $class_list as $class_name ) {
+				if (
+					strlen( $class_name ) === $wanted_length &&
+					0 === substr_compare( $class_name, $wanted_class, 0, strlen( $wanted_class ), $case_insensitive )
+				) {
+					return true;
+				}
 			}
 		}
 
