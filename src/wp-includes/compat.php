@@ -1191,6 +1191,8 @@ class WP_HTML_Doctype_Info {
 			return new self( $doctype_name, $doctype_public_id, $doctype_system_id, true );
 		}
 
+		$identifier_parsing_mode = 'parse-neither';
+
 		/*
 		 * > If the six characters starting from the current input character are an ASCII
 		 * > case-insensitive match for the word "PUBLIC", then consume those characters
@@ -1202,7 +1204,7 @@ class WP_HTML_Doctype_Info {
 			if ( $at >= $end ) {
 				return new self( $doctype_name, $doctype_public_id, $doctype_system_id, true );
 			}
-			goto parse_doctype_public_identifier;
+			$identifier_parsing_mode = 'parse-both';
 		}
 
 		/*
@@ -1210,13 +1212,16 @@ class WP_HTML_Doctype_Info {
 		 * > case-insensitive match for the word "SYSTEM", then consume those characters and switch
 		 * > to the after DOCTYPE system keyword state.
 		 */
-		if ( 0 === substr_compare( $doctype_html, 'SYSTEM', $at, 6, true ) ) {
+		if (
+			'parse-neither' === $identifier_parsing_mode &&
+			0 === substr_compare( $doctype_html, 'SYSTEM', $at, 6, true )
+		) {
 			$at += 6;
 			$at += strspn( $doctype_html, " \t\n\f\r", $at, $end - $at );
 			if ( $at >= $end ) {
 				return new self( $doctype_name, $doctype_public_id, $doctype_system_id, true );
 			}
-			goto parse_doctype_system_identifier;
+			$identifier_parsing_mode = 'parse-only-system';
 		}
 
 		/*
@@ -1224,52 +1229,54 @@ class WP_HTML_Doctype_Info {
 		 * > Set the current DOCTYPE token's force-quirks flag to on. Reconsume in the bogus
 		 * > DOCTYPE state.
 		 */
-		return new self( $doctype_name, $doctype_public_id, $doctype_system_id, true );
-
-		parse_doctype_public_identifier:
-		/*
-		 * The parser should enter "DOCTYPE public identifier (double-quoted) state" or
-		 * "DOCTYPE public identifier (single-quoted) state" by finding one of the valid quotes.
-		 * Anything else forces quirks mode and ignores the rest of the contents.
-		 *
-		 * @see https://html.spec.whatwg.org/#doctype-public-identifier-(double-quoted)-state
-		 * @see https://html.spec.whatwg.org/#doctype-public-identifier-(single-quoted)-state
-		 */
-		$closer_quote = $doctype_html[ $at ];
-
-		/*
-		 * > This is a missing-quote-before-doctype-public-identifier parse error. Set the
-		 * > current DOCTYPE token's force-quirks flag to on. Reconsume in the bogus DOCTYPE state.
-		 */
-		if ( '"' !== $closer_quote && "'" !== $closer_quote ) {
+		if ( 'parse-neither' === $identifier_parsing_mode ) {
 			return new self( $doctype_name, $doctype_public_id, $doctype_system_id, true );
 		}
 
-		++$at;
+		if ( 'parse-both' === $identifier_parsing_mode ) {
+			/*
+			 * The parser should enter "DOCTYPE public identifier (double-quoted) state" or
+			 * "DOCTYPE public identifier (single-quoted) state" by finding one of the valid quotes.
+			 * Anything else forces quirks mode and ignores the rest of the contents.
+			 *
+			 * @see https://html.spec.whatwg.org/#doctype-public-identifier-(double-quoted)-state
+			 * @see https://html.spec.whatwg.org/#doctype-public-identifier-(single-quoted)-state
+			 */
+			$closer_quote = $doctype_html[ $at ];
 
-		$identifier_length = strcspn( $doctype_html, $closer_quote, $at, $end - $at );
-		$doctype_public_id = str_replace( "\0", "\xEF\xBF\xBD", substr( $doctype_html, $at, $identifier_length ) );
+			/*
+			 * > This is a missing-quote-before-doctype-public-identifier parse error. Set the
+			 * > current DOCTYPE token's force-quirks flag to on. Reconsume in the bogus DOCTYPE state.
+			 */
+			if ( '"' !== $closer_quote && "'" !== $closer_quote ) {
+				return new self( $doctype_name, $doctype_public_id, $doctype_system_id, true );
+			}
 
-		$at += $identifier_length;
-		if ( $at >= $end || $closer_quote !== $doctype_html[ $at ] ) {
-			return new self( $doctype_name, $doctype_public_id, $doctype_system_id, true );
+			++$at;
+
+			$identifier_length = strcspn( $doctype_html, $closer_quote, $at, $end - $at );
+			$doctype_public_id = str_replace( "\0", "\xEF\xBF\xBD", substr( $doctype_html, $at, $identifier_length ) );
+
+			$at += $identifier_length;
+			if ( $at >= $end || $closer_quote !== $doctype_html[ $at ] ) {
+				return new self( $doctype_name, $doctype_public_id, $doctype_system_id, true );
+			}
+
+			++$at;
+
+			/*
+			 * "Between DOCTYPE public and system identifiers state"
+			 *
+			 * Advance through whitespace between public and system identifiers.
+			 *
+			 * @see https://html.spec.whatwg.org/#between-doctype-public-and-system-identifiers-state
+			 */
+			$at += strspn( $doctype_html, " \t\n\f\r", $at, $end - $at );
+			if ( $at >= $end ) {
+				return new self( $doctype_name, $doctype_public_id, $doctype_system_id, false );
+			}
 		}
 
-		++$at;
-
-		/*
-		 * "Between DOCTYPE public and system identifiers state"
-		 *
-		 * Advance through whitespace between public and system identifiers.
-		 *
-		 * @see https://html.spec.whatwg.org/#between-doctype-public-and-system-identifiers-state
-		 */
-		$at += strspn( $doctype_html, " \t\n\f\r", $at, $end - $at );
-		if ( $at >= $end ) {
-			return new self( $doctype_name, $doctype_public_id, $doctype_system_id, false );
-		}
-
-		parse_doctype_system_identifier:
 		/*
 		 * The parser should enter "DOCTYPE system identifier (double-quoted) state" or
 		 * "DOCTYPE system identifier (single-quoted) state" by finding one of the valid quotes.
