@@ -8640,31 +8640,41 @@ class WP_HTML_Tag_Processor {
 			return false;
 		}
 
-		$name_length = strlen( $name );
-
-		/**
+		/*
 		 * WordPress rejects more characters than are strictly forbidden
 		 * in HTML5. This is to prevent additional security risks deeper
-		 * in the WordPress and plugin stack. Specifically the following
-		 * are not allowed to be set as part of an HTML attribute name:
+		 * in the WordPress and plugin stack. Specifically the
+		 * less-than (<) greater-than (>) and ampersand (&) aren't allowed.
 		 *
-		 *  - greater-than “>”
-		 *  - ampersand “&”
+		 * The use of a PCRE match enables looking for specific Unicode
+		 * code points without writing a UTF-8 decoder. Whereas scanning
+		 * for one-byte characters is trivial (with `strcspn`), scanning
+		 * for the longer byte sequences would be more complicated. Given
+		 * that this shouldn't be in the hot path for execution, it's a
+		 * reasonable compromise in efficiency without introducing a
+		 * noticeable impact on the overall system.
 		 *
 		 * @see https://html.spec.whatwg.org/#attributes-2
+		 *
+		 * @todo As the only regex pattern maybe we should take it out?
+		 *       Are Unicode patterns available broadly in Core?
 		 */
 		if (
-			0 === $name_length ||
-			// Syntax-like characters.
-			strcspn( $name, '"\'>&</ =' ) !== $name_length ||
-			// Control characters.
-			strcspn(
-				$name,
-				"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F" .
-				"\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F"
-			) !== $name_length ||
-			// Unicode noncharacters.
-			wp_has_noncharacters( $name )
+			0 === strlen( $name ) ||
+			// HTML noncharacters.
+			preg_match(
+				'~' .
+				// Control characters.
+				'[\x00-\x1F]|' .
+				// Syntax-like characters.
+				'["\'>&</ =]|' .
+				// U+FDD0–U+FDEF.
+                '\xEF\xB7[\x90-\xAF]|' .
+                // U+nFFFE and U+nFFFF, for planes 0–16.
+				'(?:\xEF|\xF0[\x9F\xAF\xBF]|[\xF1-\xF3][\x8F\x9F\xAF\xBF]|\xF4\x8F)\xBF[\xBE\xBF]' .
+				'~S',
+				$name
+			)
 		) {
 			_doing_it_wrong(
 				__METHOD__,
