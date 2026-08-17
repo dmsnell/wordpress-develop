@@ -1727,7 +1727,7 @@ class WP_Token_Map {
 		foreach ( $groups as $group_key => $group ) {
 			usort(
 				$groups[ $group_key ],
-				static function ( array $a, array $b ): int {
+				static function ( array $a, array $b ) {
 					return self::longest_first_then_alphabetical( $a[0], $b[0] );
 				}
 			);
@@ -1838,7 +1838,7 @@ class WP_Token_Map {
 	 * @param string $case_sensitivity Optional. Pass 'ascii-case-insensitive' to ignore ASCII case when matching. Default 'case-sensitive'.
 	 * @return bool Whether there's an entry for the given word in the map.
 	 */
-	public function contains( string $word, string $case_sensitivity = 'case-sensitive' ): bool {
+	public function contains( string $word, string $case_sensitivity = 'case-sensitive' ) {
 		if ( str_contains( $word, "\x00" ) ) {
 			return false;
 		}
@@ -2046,7 +2046,7 @@ class WP_Token_Map {
 	 *
 	 * @return array The lookup key/substitution values as an associate array.
 	 */
-	public function to_array(): array {
+	public function to_array() {
 		$tokens = array();
 
 		$at            = 0;
@@ -2108,7 +2108,7 @@ class WP_Token_Map {
 	 * @param string $indent Optional. Use this string for indentation, or rely on the default horizontal tab character. Default "\t".
 	 * @return string Value which can be pasted into a PHP source file for quick loading of table.
 	 */
-	public function precomputed_php_source_table( string $indent = "\t" ): string {
+	public function precomputed_php_source_table( string $indent = "\t" ) {
 		$i1 = $indent;
 		$i2 = $i1 . $indent;
 		$i3 = $i2 . $indent;
@@ -2213,7 +2213,7 @@ class WP_Token_Map {
 	 * @param string $b Second string to compare.
 	 * @return int -1 or lower if `$a` is less than `$b`; 1 or greater if `$a` is greater than `$b`, and 0 if they are equal.
 	 */
-	private static function longest_first_then_alphabetical( string $a, string $b ): int {
+	private static function longest_first_then_alphabetical( string $a, string $b ) {
 		if ( $a === $b ) {
 			return 0;
 		}
@@ -3573,7 +3573,7 @@ class WP_HTML_Decoder {
 	 *                                 Default 'case-sensitive'.
 	 * @return bool Whether the attribute value starts with the given string.
 	 */
-	public static function attribute_starts_with( $haystack, $search_text, $case_sensitivity = 'case-sensitive' ): bool {
+	public static function attribute_starts_with( $haystack, $search_text, $case_sensitivity = 'case-sensitive' ) {
 		$search_length = strlen( $search_text );
 		$loose_case    = 'ascii-case-insensitive' === $case_sensitivity;
 		$haystack_end  = strlen( $haystack );
@@ -3679,7 +3679,7 @@ class WP_HTML_Decoder {
 	 * @param string $text Text containing raw and non-decoded text node to decode.
 	 * @return string Decoded UTF-8 value of given text node.
 	 */
-	public static function decode_text_node( $text ): string {
+	public static function decode_text_node( $text ) {
 		return static::decode( 'data', $text );
 	}
 
@@ -3699,7 +3699,7 @@ class WP_HTML_Decoder {
 	 * @param string $text Text containing raw and non-decoded attribute value to decode.
 	 * @return string Decoded UTF-8 value of given attribute value.
 	 */
-	public static function decode_attribute( $text ): string {
+	public static function decode_attribute( $text ) {
 		return static::decode( 'attribute', $text );
 	}
 
@@ -3722,7 +3722,7 @@ class WP_HTML_Decoder {
 	 * @param string $text    Text document containing span of text to decode.
 	 * @return string Decoded UTF-8 string.
 	 */
-	public static function decode( $context, $text ): string {
+	public static function decode( $context, $text ) {
 		$decoded = '';
 		$end     = strlen( $text );
 		$at      = 0;
@@ -4038,7 +4038,7 @@ class WP_HTML_Decoder {
 	 * @param int $code_point Which code point to convert.
 	 * @return string Converted code point, or `�` if invalid.
 	 */
-	public static function code_point_to_utf8_bytes( $code_point ): string {
+	public static function code_point_to_utf8_bytes( $code_point ) {
 		// Pre-check to ensure a valid code point.
 		if (
 			$code_point < 0 ||
@@ -4923,7 +4923,7 @@ class WP_HTML_Tag_Processor {
 	 *                              namespace the next tokens will be processed.
 	 * @return bool Whether the namespace was valid and changed.
 	 */
-	public function change_parsing_namespace( string $new_namespace ): bool {
+	public function change_parsing_namespace( string $new_namespace ) {
 		if ( ! in_array( $new_namespace, array( 'html', 'math', 'svg' ), true ) ) {
 			return false;
 		}
@@ -4952,7 +4952,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @phpstan-impure
 	 */
-	public function next_tag( $query = null ): bool {
+	public function next_tag( $query = null ) {
 		$this->parse_query( $query );
 		$already_found = 0;
 
@@ -5000,7 +5000,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return bool Whether a token was parsed.
 	 */
-	public function next_token(): bool {
+	public function next_token() {
 		return $this->base_class_next_token();
 	}
 
@@ -5018,7 +5018,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return bool Whether a token was parsed.
 	 */
-	private function base_class_next_token(): bool {
+	private function base_class_next_token() {
 		$was_at = $this->bytes_already_parsed;
 		$this->after_tag();
 
@@ -5225,7 +5225,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return bool Whether the parse paused at the start of an incomplete token.
 	 */
-	public function paused_at_incomplete_token(): bool {
+	public function paused_at_incomplete_token() {
 		return self::STATE_INCOMPLETE_INPUT === $this->parser_state;
 	}
 
@@ -5407,7 +5407,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $name Identifies this particular bookmark.
 	 * @return bool Whether the bookmark was successfully created.
 	 */
-	public function set_bookmark( $name ): bool {
+	public function set_bookmark( $name ) {
 		// It only makes sense to set a bookmark if the parser has paused on a concrete token.
 		if (
 			self::STATE_COMPLETE === $this->parser_state ||
@@ -5440,7 +5440,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $name Name of the bookmark to remove.
 	 * @return bool Whether the bookmark already existed before removal.
 	 */
-	public function release_bookmark( $name ): bool {
+	public function release_bookmark( $name ) {
 		if ( ! array_key_exists( $name, $this->bookmarks ) ) {
 			return false;
 		}
@@ -5461,7 +5461,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $tag_name The uppercase tag name which will close the RAWTEXT region.
 	 * @return bool Whether an end to the RAWTEXT region was found before the end of the document.
 	 */
-	private function skip_rawtext( string $tag_name ): bool {
+	private function skip_rawtext( string $tag_name ) {
 		/*
 		 * These two functions distinguish themselves on whether character references are
 		 * decoded, and since functionality to read the inner markup isn't supported, it's
@@ -5481,7 +5481,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $tag_name The uppercase tag name which will close the RCDATA region.
 	 * @return bool Whether an end to the RCDATA region was found before the end of the document.
 	 */
-	private function skip_rcdata( string $tag_name ): bool {
+	private function skip_rcdata( string $tag_name ) {
 		$html       = $this->html;
 		$doc_length = strlen( $html );
 		$tag_length = strlen( $tag_name );
@@ -5570,7 +5570,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return bool Whether the script tag was closed before the end of the document.
 	 */
-	private function skip_script_data(): bool {
+	private function skip_script_data() {
 		$state      = 'unescaped';
 		$html       = $this->html;
 		$doc_length = strlen( $html );
@@ -5779,7 +5779,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return bool Whether a tag was found before the end of the document.
 	 */
-	private function parse_next_tag(): bool {
+	private function parse_next_tag() {
 		$this->after_tag();
 
 		$html       = $this->html;
@@ -6258,7 +6258,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return bool Whether an attribute was found before the end of the document.
 	 */
-	private function parse_next_attribute(): bool {
+	private function parse_next_attribute() {
 		$doc_length = strlen( $this->html );
 
 		// Skip whitespace and slashes.
@@ -6652,7 +6652,7 @@ class WP_HTML_Tag_Processor {
 	 * @param int $shift_this_point Accumulate and return shift for this position.
 	 * @return int How many bytes the given pointer moved in response to the updates.
 	 */
-	private function apply_attributes_updates( int $shift_this_point ): int {
+	private function apply_attributes_updates( int $shift_this_point ) {
 		if ( ! count( $this->lexical_updates ) ) {
 			return 0;
 		}
@@ -6749,7 +6749,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $bookmark_name Name to identify a bookmark that potentially exists.
 	 * @return bool Whether that bookmark exists.
 	 */
-	public function has_bookmark( $bookmark_name ): bool {
+	public function has_bookmark( $bookmark_name ) {
 		return array_key_exists( $bookmark_name, $this->bookmarks );
 	}
 
@@ -6764,7 +6764,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $bookmark_name Jump to the place in the document identified by this bookmark name.
 	 * @return bool Whether the internal cursor was successfully moved to the bookmark's location.
 	 */
-	public function seek( $bookmark_name ): bool {
+	public function seek( $bookmark_name ) {
 		if ( ! array_key_exists( $bookmark_name, $this->bookmarks ) ) {
 			_doing_it_wrong(
 				__METHOD__,
@@ -6811,7 +6811,7 @@ class WP_HTML_Tag_Processor {
 	 * @param WP_HTML_Text_Replacement $b Second attribute update.
 	 * @return int Comparison value for string order.
 	 */
-	private static function sort_start_ascending( WP_HTML_Text_Replacement $a, WP_HTML_Text_Replacement $b ): int {
+	private static function sort_start_ascending( WP_HTML_Text_Replacement $a, WP_HTML_Text_Replacement $b ) {
 		$by_start = $a->start - $b->start;
 		if ( 0 !== $by_start ) {
 			return $by_start;
@@ -6981,7 +6981,7 @@ class WP_HTML_Tag_Processor {
 	 * @param WP_HTML_Attribute_Token $attribute Attribute token from the input document.
 	 * @return string Decoded attribute value.
 	 */
-	private function get_decoded_attribute_value( WP_HTML_Attribute_Token $attribute ): string {
+	private function get_decoded_attribute_value( WP_HTML_Attribute_Token $attribute ) {
 		$raw_value = substr( $this->html, $attribute->value_starts_at, $attribute->value_length );
 		$raw_value = str_replace( "\r\n", "\n", $raw_value );
 		$raw_value = str_replace( "\r", "\n", $raw_value );
@@ -7074,7 +7074,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return string One of 'html', 'math', or 'svg'.
 	 */
-	public function get_namespace(): string {
+	public function get_namespace() {
 		return $this->parsing_namespace;
 	}
 
@@ -7531,7 +7531,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return bool Whether the currently matched tag contains the self-closing flag.
 	 */
-	public function has_self_closing_flag(): bool {
+	public function has_self_closing_flag() {
 		if ( self::STATE_MATCHED_TAG !== $this->parser_state ) {
 			return false;
 		}
@@ -7556,7 +7556,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return bool Whether the current tag is a tag closer.
 	 */
-	public function is_tag_closer(): bool {
+	public function is_tag_closer() {
 		return (
 			self::STATE_MATCHED_TAG === $this->parser_state &&
 			$this->is_closing_tag &&
@@ -7770,7 +7770,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return bool Whether the text node was subdivided.
 	 */
-	public function subdivide_text_appropriately(): bool {
+	public function subdivide_text_appropriately() {
 		if ( self::STATE_TEXT_NODE !== $this->parser_state ) {
 			return false;
 		}
@@ -7853,7 +7853,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return string
 	 */
-	public function get_modifiable_text(): string {
+	public function get_modifiable_text() {
 		$has_enqueued_update = isset( $this->lexical_updates['modifiable text'] );
 
 		if ( ! $has_enqueued_update && ( null === $this->text_starts_at || 0 === $this->text_length ) ) {
@@ -8012,7 +8012,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $plaintext_content New text content to represent in the matched token.
 	 * @return bool Whether the text was able to update.
 	 */
-	public function set_modifiable_text( string $plaintext_content ): bool {
+	public function set_modifiable_text( string $plaintext_content ) {
 		if ( self::STATE_TEXT_NODE === $this->parser_state ) {
 			$this->lexical_updates['modifiable text'] = new WP_HTML_Text_Replacement(
 				$this->text_starts_at,
@@ -8551,7 +8551,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $sourcecode Raw contents intended to be serialized into an HTML SCRIPT element.
 	 * @return string Escaped form of input contents which will not lead to premature closing of the containing SCRIPT element.
 	 */
-	private static function escape_javascript_script_contents( string $sourcecode ): string {
+	private static function escape_javascript_script_contents( string $sourcecode ) {
 		$at      = 0;
 		$was_at  = 0;
 		$end     = strlen( $sourcecode );
@@ -8632,7 +8632,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string|bool $value The new attribute value.
 	 * @return bool Whether an attribute value was set.
 	 */
-	public function set_attribute( $name, $value ): bool {
+	public function set_attribute( $name, $value ) {
 		if (
 			self::STATE_MATCHED_TAG !== $this->parser_state ||
 			$this->is_closing_tag
@@ -8793,7 +8793,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $name The attribute name to remove.
 	 * @return bool Whether an attribute was removed.
 	 */
-	public function remove_attribute( $name ): bool {
+	public function remove_attribute( $name ) {
 		if (
 			self::STATE_MATCHED_TAG !== $this->parser_state ||
 			$this->is_closing_tag
@@ -8873,7 +8873,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $class_name The class name to add.
 	 * @return bool Whether the class was set to be added.
 	 */
-	public function add_class( $class_name ): bool {
+	public function add_class( $class_name ) {
 		if (
 			self::STATE_MATCHED_TAG !== $this->parser_state ||
 			$this->is_closing_tag
@@ -8915,7 +8915,7 @@ class WP_HTML_Tag_Processor {
 	 * @param string $class_name The class name to remove.
 	 * @return bool Whether the class was set to be removed.
 	 */
-	public function remove_class( $class_name ): bool {
+	public function remove_class( $class_name ) {
 		if (
 			self::STATE_MATCHED_TAG !== $this->parser_state ||
 			$this->is_closing_tag
@@ -8958,7 +8958,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return string The processed HTML.
 	 */
-	public function __toString(): string {
+	public function __toString() {
 		return $this->get_updated_html();
 	}
 
@@ -8971,7 +8971,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return string The processed HTML.
 	 */
-	public function get_updated_html(): string {
+	public function get_updated_html() {
 		$requires_no_updating = 0 === count( $this->classname_updates ) && 0 === count( $this->lexical_updates );
 
 		/*
@@ -9095,7 +9095,7 @@ class WP_HTML_Tag_Processor {
 	 *
 	 * @return bool Whether the given tag and its attribute match the search criteria.
 	 */
-	private function matches(): bool {
+	private function matches() {
 		if ( $this->is_closing_tag && ! $this->stop_on_tag_closers ) {
 			return false;
 		}
