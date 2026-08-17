@@ -7926,7 +7926,7 @@ class WP_HTML_Tag_Processor {
 		 * this transformation only after decoding the raw text content.
 		 */
 		if (
-			( "\n" === ( $decoded[0] ?? '' ) ) &&
+			( "\n" === ( isset( $decoded[0] ) ? $decoded[0] : '' ) ) &&
 			( ( $this->skip_newline_at === $this->token_starts_at && '#text' === $tag_name ) || 'TEXTAREA' === $tag_name )
 		) {
 			$decoded = substr( $decoded, 1 );
@@ -8852,12 +8852,14 @@ class WP_HTML_Tag_Processor {
 		);
 
 		// Removes any duplicated attributes if they were also present.
-		foreach ( $this->duplicate_attributes[ $name ] ?? array() as $attribute_token ) {
-			$this->lexical_updates[] = new WP_HTML_Text_Replacement(
-				$attribute_token->start,
-				$attribute_token->length,
-				''
-			);
+		if ( isset( $this->duplicate_attributes[ $name ] ) ) {
+			foreach ( $this->duplicate_attributes[ $name ] as $attribute_token ) {
+				$this->lexical_updates[] = new WP_HTML_Text_Replacement(
+					$attribute_token->start,
+					$attribute_token->length,
+					''
+				);
+			}
 		}
 
 		return true;
@@ -8984,7 +8986,7 @@ class WP_HTML_Tag_Processor {
 		 * Keep track of the position right before the current tag. This will
 		 * be necessary for reparsing the current tag after updating the HTML.
 		 */
-		$before_current_tag = $this->token_starts_at ?? 0;
+		$before_current_tag = isset( $this->token_starts_at ) ? $this->token_starts_at : 0;
 
 		/*
 		 * 1. Apply the enqueued edits and update all the pointers to reflect those changes.
