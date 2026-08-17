@@ -2115,7 +2115,7 @@ class WP_Token_Map {
 
 		$class_version = self::STORAGE_VERSION;
 
-		$output  = self::class . "::from_precomputed_table(\n";
+		$output  = "WP_Token_Map::from_precomputed_table(\n";
 		$output .= "{$i1}array(\n";
 		$output .= "{$i2}\"storage_version\" => \"{$class_version}\",\n";
 		$output .= "{$i2}\"key_length\" => {$this->key_length},\n";
@@ -6669,7 +6669,7 @@ class WP_HTML_Tag_Processor {
 		 * can lead to mangled output, partially-duplicated
 		 * attributes, and overwritten attributes.
 		 */
-		usort( $this->lexical_updates, array( self::class, 'sort_start_ascending' ) );
+		usort( $this->lexical_updates, array( 'WP_HTML_Tag_Processor', 'sort_start_ascending' ) );
 
 		$bytes_already_copied = 0;
 		$output_buffer        = '';
