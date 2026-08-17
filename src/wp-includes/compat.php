@@ -2144,22 +2144,44 @@ class WP_Token_Map {
 				$token_digits   = str_pad( dechex( $token_length ), 2, '0', STR_PAD_LEFT );
 				$mapping_digits = str_pad( dechex( $mapping_length ), 2, '0', STR_PAD_LEFT );
 
-				$mapping = preg_replace_callback(
-					"~[\\x00-\\x1f\\x22\\x5c]~",
-					static function ( $match_result ) {
-						switch ( $match_result[0] ) {
-							case '"':
-								return '\\"';
-
-							case '\\':
-								return '\\\\';
-
-							default:
-								$hex = dechex( ord( $match_result[0] ) );
-								return "\\x{$hex}";
-						}
-					},
-					$mapping
+				$mapping = strtr(
+					$mapping,
+					array(
+						"\x00" => '\x00',
+						"\x01" => '\x01',
+						"\x02" => '\x02',
+						"\x03" => '\x03',
+						"\x04" => '\x04',
+						"\x05" => '\x05',
+						"\x06" => '\x06',
+						"\x07" => '\x07',
+						"\x08" => '\x08',
+						"\x09" => '\x09',
+						"\x0A" => '\x0A',
+						"\x0B" => '\x0B',
+						"\x0C" => '\x0C',
+						"\x0D" => '\x0D',
+						"\x0E" => '\x0E',
+						"\x0F" => '\x0F',
+						"\x10" => '\x10',
+						"\x11" => '\x11',
+						"\x12" => '\x12',
+						"\x13" => '\x13',
+						"\x14" => '\x14',
+						"\x15" => '\x15',
+						"\x16" => '\x16',
+						"\x17" => '\x17',
+						"\x18" => '\x18',
+						"\x19" => '\x19',
+						"\x1A" => '\x1A',
+						"\x1B" => '\x1B',
+						"\x1C" => '\x1C',
+						"\x1D" => '\x1D',
+						"\x1E" => '\x1E',
+						"\x1F" => '\x1F',
+						'"'    => '\\"',
+						'\\'   => '\\\\',
+					)
 				);
 
 				$comment_line .= " {$prefix}{$token}[{$mapping}]";
@@ -8228,11 +8250,9 @@ class WP_HTML_Tag_Processor {
 				return true;
 
 			case 'STYLE':
-				$plaintext_content = preg_replace_callback(
-					'~</(?P<TAG_NAME>style)~i',
-					static function ( $tag_match ) {
-						return "\\3c\\2f{$tag_match['TAG_NAME']}";
-					},
+				$plaintext_content = preg_replace(
+					'~</(style)~i',
+					'\\\\3c\\\\2f$1',
 					$plaintext_content
 				);
 
@@ -8246,11 +8266,9 @@ class WP_HTML_Tag_Processor {
 
 			case 'TEXTAREA':
 			case 'TITLE':
-				$plaintext_content = preg_replace_callback(
-					"~</(?P<TAG_NAME>{$this->get_tag()})~i",
-					static function ( $tag_match ) {
-						return "&lt;/{$tag_match['TAG_NAME']}";
-					},
+				$plaintext_content = preg_replace(
+					"~</({$this->get_tag()})~i",
+					'&lt;/$1',
 					$plaintext_content
 				);
 
