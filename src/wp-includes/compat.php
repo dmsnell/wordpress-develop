@@ -1839,7 +1839,7 @@ class WP_Token_Map {
 	 * @return bool Whether there's an entry for the given word in the map.
 	 */
 	public function contains( $word, $case_sensitivity = 'case-sensitive' ) {
-		if ( str_contains( $word, "\x00" ) ) {
+		if ( false !== strpos( $word, "\x00" ) ) {
 			return false;
 		}
 
@@ -8062,7 +8062,7 @@ class WP_HTML_Tag_Processor {
 			 * A processing instruction ends at the first `>` in its
 			 * raw syntax: data containing one cannot be represented.
 			 */
-			if ( str_contains( $plaintext_content, '>' ) ) {
+			if ( false !== strpos( $plaintext_content, '>' ) ) {
 				_doing_it_wrong(
 					__METHOD__,
 					__( 'Processing instruction data cannot contain ">".' ),
