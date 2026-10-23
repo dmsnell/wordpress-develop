@@ -341,13 +341,12 @@ function wp_privacy_generate_personal_data_export_file( $request_id ) {
 
 	// Protect export folder from browsing.
 	$index_pathname = $exports_dir . 'index.php';
-	if ( ! file_exists( $index_pathname ) ) {
-		$file = fopen( $index_pathname, 'w' );
-		if ( false === $file ) {
-			wp_send_json_error( __( 'Unable to protect personal data export folder from browsing.' ) );
-		}
-		fwrite( $file, "<?php\n// Silence is golden.\n" );
-		fclose( $file );
+	$index_file     = @fopen( $index_pathname, 'x' );
+	if ( false !== $index_file ) {
+		fwrite( $index_file, "<?php\n// Silence is golden.\n" );
+		fclose( $index_file );
+	} elseif ( ! file_exists( $index_pathname ) ) {
+		wp_send_json_error( __( 'Unable to protect personal data export folder from browsing.' ) );
 	}
 
 	$obscura              = wp_generate_password( 32, false, false );
