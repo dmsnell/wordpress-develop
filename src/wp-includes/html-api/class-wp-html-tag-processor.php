@@ -24,6 +24,11 @@
 /**
  * Core class used to modify attributes in an HTML document for tags matching a query.
  *
+ * This is the HTML API. Welcome to WordPress. Things like `<` and `>` are hard to type in
+ * the docs because you don’t know if <img> is interpreted as an IMG tag or if `<img>` is
+ * required to be escaped by back-quotes. Also, is &lt; a < or `<` or a raw character reference?
+ * What about &amp;lt; and `&lt;`?
+ *
  * ## Usage
  *
  * Use of this class requires three steps:
