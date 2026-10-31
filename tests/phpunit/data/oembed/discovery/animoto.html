@@ -1,0 +1,477 @@
+
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js  <!--<![endif]-->
+  <head  prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# video: http://ogp.me/ns/video#">
+      <link rel="preload" href="https://d2of6bhnpl91ni.cloudfront.net/pkg/css/chimera-3a4a267bbb.css" as="style">
+  <link rel="preload" href="https://d2of6bhnpl91ni.cloudfront.net/pkg/css/icons-1e40342112.css" as="style">
+  <link rel="preload" href="https://d2of6bhnpl91ni.cloudfront.net/pkg/css/webfont-b4fb60f3cc.css" as="style">
+
+    <link rel="dns-prefetch" href="https://d2of6bhnpl91ni.cloudfront.net" />
+<link rel="dns-prefetch" href="https://d2r6q1p754p9pi.cloudfront.net" />
+<link rel="dns-prefetch" href="https://d2yc83ilop69kq.cloudfront.net" />
+
+    <script >
+      (function() {
+  var html = document.documentElement,
+      wf,
+      s;
+
+  if (sessionStorage.fontsLoaded === 'true') {
+    html.classList.add('fonts-loaded');
+    return;
+  }
+
+  wf = document.createElement('script');
+  wf.src = "https://d2of6bhnpl91ni.cloudfront.net/pkg/js/font_face_observer-4fe126cbdc.js";
+  wf.type = 'text/javascript';
+  wf.async = 'true';
+  s = document.getElementsByTagName('script')[0];
+  s.parentNode.insertBefore(wf, s);
+
+  html.classList.add('fonts-loading');
+
+  wf.onload = wf.onreadystatechange = function() {
+    var proximaNova = new FontFaceObserver('ProximaNova'),
+        proximaNovaBold = new FontFaceObserver('ProximaNova-Bold', {
+          weight: 'bold'
+        }),
+        playfairBold = new FontFaceObserver('PlayfairDisplay-Bold', {
+          weight: 'bold'
+        });
+
+    proximaNova.load().then(function () {
+      return proximaNovaBold.load().then(function() {
+        return playfairBold.load().then(function () {
+          sessionStorage.fontsLoaded = true;
+          html.classList.remove('fonts-loading');
+          html.classList.add('fonts-loaded');
+        })
+      });
+    }).catch(function () {
+      sessionStorage.fontsLoaded = false;
+      html.classList.remove('fonts-loading');
+      html.classList.add('fonts-failed');
+    });
+  }
+})();
+
+      var AS_SETTINGS = {
+  project_with_assets_map_header: {
+    'Accept': 'application/vnd.animoto.project_with_assets_map-v4+json'
+  }
+};
+
+var AS_HEADERS = {
+  'Content-Type': 'application/vnd.animoto-v4+json',
+  'Accept'      : 'application/vnd.animoto-v4+json'
+};
+
+        var optimizelyRedirect = function(url) {
+        if(!url) {
+          return;
+        }
+
+        var referrer = document.referrer;
+
+        if(referrer && window.localStorage) {
+          window.localStorage.referrer = referrer;
+        }
+
+        var redirectTo  = document.createElement("a"),
+            queryParams = window.location.search;
+
+        redirectTo.href = url;
+        if(queryParams) {
+          // Check if we are in the optimizely editor
+          if(queryParams.search('optimizely_editor=true') > -1) {
+            return;
+          }
+          redirectTo.search = redirectTo.search ? [queryParams, redirectTo.search.slice(1)].join('&') : queryParams;
+        }
+
+        window.location.replace(redirectTo.href);
+      },
+      optimizelyCreateCookie = function(key, val) {
+        document.cookie = key + '=' + val + '; path=/';
+      },
+      getCookieSetByOptimizely = function(optyCookie) {
+        var d = document,
+            cookieValue = null,
+            i,
+            cookies,
+            cookie;
+
+        if (d.cookie && d.cookie !== '') {
+          cookies = d.cookie.split(';');
+          for (i = 0; i < cookies.length; i++) {
+            cookie = cookies[i].replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+            if (cookie.substring(0, optyCookie.length + 1) === (optyCookie + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(optyCookie.length + 1));
+              break;
+            }
+          }
+        }
+
+        return cookieValue;
+      },
+      optimizelyTrackScrolling = function() {
+        var scroll25 = true,
+            scroll50 = true,
+            scroll75 = true,
+            scroll100 = true,
+            getDocumentHeight = function() {
+              return Math.max(
+                  document.body.scrollHeight, document.documentElement.scrollHeight,
+                  document.body.offsetHeight, document.documentElement.offsetHeight,
+                  document.body.clientHeight, document.documentElement.clientHeight
+              )
+            };
+
+        // Conditional code we'll use to fire events based on scrollPercentage.
+        var pushScrollPositionEvents = function() {
+
+          var windowHeight= window.innerHeight || (document.documentElement || document.body).clientHeight,
+              documentHeight = getDocumentHeight(),
+              scrollTop = window.pageYOffset || (document.documentElement || document.body.parentNode || document.body).scrollTop,
+              trackLength = documentHeight - windowHeight,
+              scrollPercent = Math.floor(scrollTop/trackLength * 100);
+
+          if (scrollPercent >= 25 && scroll25) {
+            animoto.util.analytics.trackGoal('scroll_25');
+            scroll25 = false;
+          }
+
+          if (scrollPercent >= 50 && scroll50) {
+            animoto.util.analytics.trackGoal('scroll_50');
+            scroll50 = false;
+          }
+
+          if (scrollPercent >= 75 && scroll75) {
+            animoto.util.analytics.trackGoal('scroll_75');
+            scroll75 = false;
+          }
+
+          if (scrollPercent >= 100 && scroll100) {
+            animoto.util.analytics.trackGoal('scroll_100');
+            scroll100 = false;
+          }
+        };
+        window.addEventListener('scroll', _.throttle(pushScrollPositionEvents, 100));
+      };
+  utm = [];
+  dataLayer = window.dataLayer || [];
+  dataLayer.push({
+    cookie_domain    : '.animoto.com',
+    customerSegment  : 'visitor',
+    event            : 'snowplowTrackingReady',
+    is_bot           : true,
+    user_country     : 'US',
+    user_plan        : 'visitor',
+    user_segment     : '',
+    user_id          : '',
+    user_name        : '',
+    user_email       : '',
+    user_first_name  : '',
+    user_last_name   : '',
+    user_postal_code : '',
+    user_had_a_trial : false,
+    ua_profile       : 'UA-1450253-19',
+    classic_profile  : 'UA-1450253-1',
+    dimension1       : 'visitor:none:none:' + parseFloat(window.devicePixelRatio).toFixed(2) + 'x',
+    dimension2       : 'XX', // NB: 'XX' replaces legacy/invalid data that used to be the combination of gender and age. See https://animoto.atlassian.net/browse/WC-279
+    dimension4       : 'x:x',
+    // snowplow data tracking
+    env              : 'production'
+    , pageInfo : {
+      schema : 'iglu:com.animoto/page_info/jsonschema/1-0-0',
+      data   : {
+        scope : 'visitor-play-page'
+      }
+    }
+  });
+  const user_data = false ? {
+      isLoggedIn    : true,
+      id            : '',
+      email         : '',
+      phone         : '',
+      first_name    : '',
+      last_name     : '',
+      street        : '',
+      city          : '',
+      region        : '',
+      country       : '',
+      postal_code   : '',
+      method        : 'email',
+      signup_source : ''
+  } : { isLoggedIn: false };
+
+  dataLayer.push({
+    event     : 'user_data',
+    user_data
+  });
+
+  dataLayer.push({"event":"appservice_user","appservice_user":{"logged_in":false}});
+
+
+  if(window.localStorage && window.localStorage.referrer) {
+    dataLayer.push({
+      referrer_override: window.localStorage.referrer
+    });
+    delete window.localStorage.referrer;
+  }
+      dataLayer.push({'ga_path': '/play/unavailable'});
+  window.optimizely = [];
+  window.optimizelySettings = {};
+
+      
+    </script>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="shortcut icon" href="https://d2of6bhnpl91ni.cloudfront.net/images/icons/favicon-ad8c655da9.ico" />
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="https://d2of6bhnpl91ni.cloudfront.net/images/icons/touchicon-144-4a42d97241.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="https://d2of6bhnpl91ni.cloudfront.net/images/icons/touchicon-114-fb592c00d7.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="https://d2of6bhnpl91ni.cloudfront.net/images/icons/touchicon-72-d0854f51a6.png" />
+    <link rel="apple-touch-icon-precomposed" href="https://d2of6bhnpl91ni.cloudfront.net/images/icons/touchicon-57-40d80126a6.png" />
+    <meta name="robots" content="noindex, follow" />
+    <meta name="description" content="Animoto&#39;s video maker turns your photos and video clips into professional videos in minutes. Fast and shockingly simple - we make video creation easy." />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Video - Animoto</title>
+      <link rel="stylesheet" media="screen" href="https://d2of6bhnpl91ni.cloudfront.net/pkg/css/chimera-3a4a267bbb.css" />
+      <link rel="stylesheet" media="screen" href="https://d2of6bhnpl91ni.cloudfront.net/pkg/css/icons-1e40342112.css" />
+      <link rel="stylesheet" media="screen" href="https://d2of6bhnpl91ni.cloudfront.net/pkg/css/webfont-b4fb60f3cc.css" />
+
+    <link rel="stylesheet" media="screen" href="https://d2of6bhnpl91ni.cloudfront.net/pkg/css/play_page-82fbc95997.css" /><link rel="stylesheet" media="screen" href="https://d2of6bhnpl91ni.cloudfront.net/pkg/css/tokens-fb2865c367.css" />
+    
+    <link href="https://animoto.com/play/1SmDnO20IS371lONYF8ElQ" rel="canonical" />
+    <meta name="csrf-param" content="authenticity_token" />
+<meta name="csrf-token" content="5MMJZuNgcLJq/S8fr4Cg5o85FMlCyWLYn7r//LeHHXiQbVH9qtYzSlYmPic895bxUu657jVk4N8oMMhrO57yzw==" />
+    <script>
+//<![CDATA[
+var AUTH_TOKEN = "7O1eDPdqjMiGdGBdiMa/nZqHVZkErabqbPGD7h1D1kqYQwaXvtzPMLqvcWUbsYmKR1D4vnMAJO3be7R5kVo5/Q==";
+//]]>
+</script>
+    <script src="https://d2of6bhnpl91ni.cloudfront.net/pkg/js/launch_darkly-f1542b614f.js" crossorigin="anonymous"></script>
+    <script>
+  window.clientSideLdUser = {"kind":"user","key":"Wai4GIgW+zznuKc/+56xAlUsboHiVmDi7uagr04T9N4=","anonymous":true,"country":"US","ip":"184.179.216.239","client":"web","hostname":"web2-http-67fcb564cd-fnrw9","page":"/play/1SmDnO20IS371lONYF8ElQ","smartphone":false,"now":1793473965708,"browserName":"Unknown Browser","browserVersion":0,"crossSessionId":"Wai4GIgW+zznuKc/+56xAlUsboHiVmDi7uagr04T9N4=","_meta":{"privateAttributes":["email","country","ip"]}};
+  window.ldclient = LDClient.initialize('59f205faa3862f0accd10655', clientSideLdUser);
+</script>
+
+      <meta content="{&quot;dsn&quot;:&quot;https://c143d5448ec14841bd674a8c312949ff@o17943.ingest.sentry.io/34788&quot;,&quot;release&quot;:&quot;0cc386fc72fa9b2c79d5120ef84e7fd8881f924a&quot;,&quot;whitelistUrls&quot;:[&quot;animoto.com&quot;,&quot;d2of6bhnpl91ni.cloudfront.net&quot;,&quot;d2r6q1p754p9pi.cloudfront.net&quot;,&quot;d2yc83ilop69kq.cloudfront.net&quot;,&quot;d150hyw1dtprld.cloudfront.net&quot;],&quot;environment&quot;:&quot;production&quot;,&quot;sampleRate&quot;:0.4}" id="sentry-bootstrap">
+    <meta content="{&quot;optimizely&quot;:false,&quot;google_tag_manager&quot;:true,&quot;youtube-export&quot;:false,&quot;vimeo-export&quot;:false,&quot;smugmug-export&quot;:true,&quot;wistia-export&quot;:true,&quot;facebook-export&quot;:true,&quot;linkedin-export&quot;:true,&quot;vzaar-export&quot;:true,&quot;hubspot-export&quot;:true,&quot;twitter-export&quot;:false,&quot;instagram-export&quot;:false,&quot;instagram-business-export&quot;:false,&quot;linkedin-page-export&quot;:false,&quot;facebook-profile-export&quot;:false,&quot;facebook-page-export&quot;:false,&quot;email_shares&quot;:true,&quot;sentry&quot;:40}" id="ld-bootstrap">
+    <script >(function(w,d,s,l,i){w[l]=w[l]||[];var n=d.querySelector('[nonce]');
+n&&w[l].push({'nonce': n.nonce||n.getAttribute});w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;n&&j.setAttribute('nonce',n.nonce||n.getAttribute('nonce'));f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-RZK8');</script>
+
+  </head>
+  <body class="page fb-no-session " id="">
+    <noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-RZK8" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+    
+    <div id="notifications" class="notifications">
+</div>
+
+    
+
+
+
+
+
+<div id="js-react-play-page" style="min-height: 100vh;"></div>
+
+
+
+    <div id="fb-root"></div>
+    
+    <script src="https://d2of6bhnpl91ni.cloudfront.net/pkg/js/modernizr-8a19d7667b.js" crossorigin="anonymous"></script>
+      <script src="https://d2of6bhnpl91ni.cloudfront.net/pkg/js/no_backbone_vendor-d538e0089c.js" crossorigin="anonymous"></script>
+    <script src="https://d2of6bhnpl91ni.cloudfront.net/pkg/js/core-a408802124.js" crossorigin="anonymous"></script>
+    <script src="https://d2of6bhnpl91ni.cloudfront.net/pkg/js/util-24525f488a.js" crossorigin="anonymous"></script>
+    <script>
+  var ravenOptions = {
+    release : '0cc386fc72fa9b2c79d5120ef84e7fd8881f924a',
+
+    whitelistUrls : ['animoto.com','d2of6bhnpl91ni.cloudfront.net','d2r6q1p754p9pi.cloudfront.net','d2yc83ilop69kq.cloudfront.net','d150hyw1dtprld.cloudfront.net'],
+
+    tags: {
+      environment : 'production',
+    },
+
+    maxMessageLength : 1000,
+
+    // Will cause a deprecation warning, but the demise of `ignoreErrors` is still under discussion.
+    // See: https://github.com/getsentry/raven-js/issues/73
+    ignoreErrors : [
+      // Random plugins/extensions
+      'top.GLOBALS',
+      // See: http://blog.errorception.com/2012/03/tale-of-unfindable-js-error.html
+      'originalCreateNotification',
+      'canvas.contentDocument',
+      'MyApp_RemoveAllHighlights',
+      'http://tt.epicplay.com',
+      'Can\'t find variable: ZiteReader',
+      'jigsaw is not defined',
+      'ComboSearch is not defined',
+      'http://loading.retry.widdit.com/',
+      'atomicFindClose',
+      // Facebook borked
+      'fb_xd_fragment',
+      // ISP "optimizing" proxy - `Cache-Control: no-transform` seems to reduce this. (thanks @acdha)
+      // See http://stackoverflow.com/questions/4113268/how-to-stop-javascript-injection-from-vodafone-proxy
+      'bmi_SafeAddOnload',
+      'EBCallBackMessageReceived',
+      // See http://toolbar.conduit.com/Developer/HtmlAndGadget/Methods/JSInjection.aspx
+      'conduitPage',
+      // Weird errors that are happening in moxie due to coming in and out of uploader needs
+      'Cannot read property \'style\' of null',
+      'null is not an object (evaluating \'u.style\')',
+      // Generic error code from errors outside the security sandbox
+      // You can delete this if using raven.js > 1.0, which ignores these automatically.
+      'Script error.',
+      'Blocked a frame with origin "https://animoto.com" from accessing a cross-origin frame.',
+      'SimilarDeals.ui.fdUi',
+      'This Engine has been disposed'
+    ],
+
+    ignoreUrls : [
+      // Facebook flakiness
+      /graph\.facebook\.com/i,
+      // Facebook blocked
+      /connect\.facebook\.net\/en_US\/all\.js/i,
+      // Woopra flakiness
+      /eatdifferent\.com\.woopra-ns\.com/i,
+      /static\.woopra\.com\/js\/woopra\.js/i,
+      // Chrome extensions
+      /extensions\//i,
+      /^chrome:\/\//i,
+      // Other plugins
+      /127\.0\.0\.1:4001\/isrunning/i,  // Cacaoweb
+      /webappstoolbarba\.texthelp\.com\//i,
+      /metrics\.itunes\.apple\.com\.edgesuite\.net\//i,
+      /affs/i
+    ],
+
+    shouldSendCallback : function(data) {
+      var queryParams = window.location.search;
+      if(queryParams) {
+        // Check if we are in the optimizely editor
+        if(queryParams.search('optimizely_editor=true') > -1) {
+          return false;
+        }
+      }
+
+      return true;
+    },
+
+    autoBreadcrumbs: {
+      'xhr'      : false,
+      'console'  : false,
+      'dom'      : true,
+      'location' : false
+    },
+
+    sampleRate: 0.4
+  };
+  if (window.Raven) {
+
+    Raven.config('https://c143d5448ec14841bd674a8c312949ff@o17943.ingest.sentry.io/34788', ravenOptions).install();
+  }
+</script>
+
+        <script src="https://d2of6bhnpl91ni.cloudfront.net/bundles/react/manifest-dc3cd335.js" crossorigin="anonymous" defer="defer"></script>
+  
+  <script src="https://d2of6bhnpl91ni.cloudfront.net/bundles/react/vendor-70f9c6e3.js" crossorigin="anonymous" defer="defer"></script>
+  <script src="https://d2of6bhnpl91ni.cloudfront.net/bundles/react/polyfill-d5cd1086.js" crossorigin="anonymous" defer="defer"></script>
+
+  <script src="https://d2of6bhnpl91ni.cloudfront.net/bundles/react/play-f1f84ddc.js" crossorigin="anonymous" defer="defer"></script>
+
+
+    <script >
+        
+window.fbAsyncInit = function() {
+  if (animoto && animoto.fb) {
+    animoto.fb.init.initialize({
+      appID : '2415716319'
+    });
+
+    animoto.fb.user.setID('');
+    animoto.fb.user.setASUid(null);
+
+    FB.Event.subscribe('auth.authResponseChange', animoto.fb.auth.responseChange);
+
+    FB.Event.subscribe('xfbml.render', function(response) {
+      while (func = animoto.fb.util.fbAsyncInitFuncs.shift()) {
+        if (typeof func == "function") {
+          func.call();
+        }
+      }
+    });
+
+    FB.animoto = {
+      retries: 0,
+      fb_user: null,
+      fb_session: null,
+      logging_in: false
+    };
+  }
+};
+
+(function(d, s, id) {
+  if (animoto && animoto.util && animoto.util.browser) {
+    animoto.util.browser.loggedIn = false;
+  }
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/sdk.js";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));
+
+        
+      
+if (Cookies.get('consent') !== 'given') {
+  $(document).ready(function() {
+    $('.js-gdpr-logged-out-accept').click(function() {
+      $('.js-gdpr-logged-out-banner').slideUp(150);
+      Cookies.set('consent', 'given');
+      dataLayer.push({ event : 'tracking_accepted' });
+    });
+  });
+}
+
+
+          var renderData = { "video_formats": [], "jobs": [] };
+
+    document.addEventListener('DOMContentLoaded', function() {
+      play.default('js-react-play-page', {
+        currentUserAttributes : {"anonymous":true,"id":-1,"entitlements":[],"plan_category":"none","plan_category_name":"none","limits":{"max_brand_settings":0,"max_footage_length_in_seconds":5,"max_video_length_in_seconds":30,"max_visuals_per_project":300,"max_share_emails_per_month":1000}},
+        params : {
+          aspectRatio         : 'landscape',
+          autostart           : false,
+          coverImageUrl       : '',
+          ctaTitle            : '',
+          ctaUrl              : '',
+          defaultResolution   : '',
+          description         : '',
+          displayDate         : '',
+          isMobile            : false,
+          isVideoOwner        : false,
+          isVideoUnavailable  : true,
+          producerName        : '',
+          renderData          : renderData,
+          showSocialNetworks  : false,
+          title               : '',
+        }
+      });
+    });
+
+    </script>
+
+    <script src="https://d2of6bhnpl91ni.cloudfront.net/pkg/js/set_user_local_storage-45402a54a1.js" crossorigin="anonymous"></script>
+  </body>
+</html>

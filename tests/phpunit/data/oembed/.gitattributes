@@ -1,0 +1,4 @@
+# Preserve captured bytes and expectation whitespace across platforms.
+responses/** -text
+discovery/** -text
+expected/** -text

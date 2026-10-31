@@ -1,0 +1,19 @@
+{
+    "version": "1.0",
+    "type": "rich",
+    "image": "https://thumbnailer.mixcloud.com/unsafe/600x600/extaudio/6/1/a/1/279f-e3c0-4871-aa8e-c4cf5466edb8.png",
+    "thumbnail_url": "https://thumbnailer.mixcloud.com/unsafe/600x600/extaudio/6/1/a/1/279f-e3c0-4871-aa8e-c4cf5466edb8.png",
+    "thumbnail_width": 600,
+    "thumbnail_height": 600,
+    "width": 600,
+    "height": 120,
+    "title": "Party Time",
+    "url": "https://www.mixcloud.com/spartacus/party-time/",
+    "author_name": "Spartacus",
+    "author_url": "https://www.mixcloud.com/spartacus/",
+    "provider_name": "Mixcloud",
+    "provider_url": "https://www.mixcloud.com",
+    "cache_age": 86400,
+    "html": "<iframe width=\"100%\" height=\"120\" src=\"https://www.mixcloud.com/widget/iframe/?feed=https%3A%2F%2Fwww.mixcloud.com%2Fspartacus%2Fparty-time%2F&amp;hide_cover=1\" frameborder=\"0\" allow=\"encrypted-media; fullscreen; autoplay; idle-detection; speaker-selection; web-share;\"></iframe>\n",
+    "embed": "<iframe width=\"100%\" height=\"120\" src=\"https://www.mixcloud.com/widget/iframe/?feed=https%3A%2F%2Fwww.mixcloud.com%2Fspartacus%2Fparty-time%2F&amp;hide_cover=1\" frameborder=\"0\" allow=\"encrypted-media; fullscreen; autoplay; idle-detection; speaker-selection; web-share;\"></iframe>\n"
+}
