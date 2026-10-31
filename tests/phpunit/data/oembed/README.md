@@ -1,10 +1,10 @@
 # Captured oEmbed providers
 
-This corpus contains anonymous, real HTTP responses captured for PR #15269.
-`manifest.json` identifies the exact code revision, content/request/final URLs,
-UTC capture times, HTTP statuses, content types, user agents, and SHA-256 hashes.
-Its inventory covers all 30 built-in services, plus WordPress discovery and
-additional XML, discovered-endpoint, and regional variants.
+This corpus contains real provider responses captured for PR #15269.
+The PHP data providers in `tests/phpunit/tests/oembed/providerFixtures.php`
+identify the fixture files, source URLs, response types, and expected discovery
+endpoints. Cases include built-in providers, WordPress discovery, and additional
+XML, discovered-endpoint, and regional examples.
 
 - `responses/` contains unchanged JSON/XML response bodies. Embedded markup,
   entities, scripts, and whitespace have not been edited. Photo responses retain
@@ -18,9 +18,26 @@ additional XML, discovered-endpoint, and regional variants.
   implementation. Discovery endpoints were extracted independently from the
   captured page's LINK attributes, stopping at HEAD closure or BODY opening.
 
-Unavailable responses have an error/status in the manifest and no response file.
-Animoto and Kickstarter were unavailable at capture time. Amazon China's endpoint
-returned an HTML page instead of oEmbed data. These are not passing provider cases.
+Successful cases use genuine provider content rather than challenge pages or
+unavailable-content notices. A genuine page may have no discovery endpoint,
+including when its discovery links fall beyond the response-size limit.
+
+SoundCloud's XML response is retained unchanged as a separately tested malformed
+response: its escaped CDATA markers become literal text around the iframe, so
+HTML parsing finds no iframe. It is excluded from successful response cases.
+SoundCloud JSON and Canva XML provide valid iframe examples. The SoundCloud JSON
+sample, "Hobnotropic" by matas petrikas, was also played in an iframe in Chrome.
+Canva's discovery page is omitted because its browser verification could not be
+completed; its valid JSON and XML oEmbed responses are retained.
+
+Kickstarter's JSON was supplied by the user from an external browser request to
+`https://www.kickstarter.com/services/oembed?url=https%3A%2F%2Fwww.kickstarter.com%2Fprojects%2Fankermake%2Feufymake-e1-the-first-personal-3d-textured-uv-printer`.
+Its discovery fixture is the first 153,600 bytes of the user-supplied
+`kickstarter-eufymakee1.html` project-page response. These were obtained outside
+the VM because the VM's browser requests were challenged. The JSON retains the
+supplied 480 by 270 dimensions; no request headers, timestamps, or HTTP statuses
+are inferred for these externally supplied files.
+
 The regional Amazon examples share an ASIN; they do not establish regional catalog
 availability. Flickr's page uses `rel="alternative"`; this PR revision does not
 require `rel="alternate"` during discovery.
@@ -39,15 +56,18 @@ using `pre_http_request`, and their URLs and response limits are asserted.
 Photo responses exercise `data2html()`. Rich/video responses exercise
 `_strip_newlines()` directly, without unrelated sanitization filters. The Reddit
 case additionally checks the original four links and one widget script.
+SoundCloud JSON and Canva XML additionally check the exact iframe source.
 
 ## Refreshing
 
-Refresh only intentionally. Fetch the manifest's request URLs anonymously, follow
-redirects, and save the original response body bytes without JSON reserialization
-or newline normalization. For discovery pages, save only the first 153,600 bytes.
-Record the actual request user agent, final URL, status, content type, timestamp,
-and SHA-256 hash. Do not save error/challenge pages as successful oEmbed responses.
-If a sample disappears, find another public sample on that service and record it.
+Refresh only intentionally. Use the source URLs in the PHP data providers to
+retrieve discovery pages and request their registered or discovered oEmbed
+endpoints. Follow redirects and save the original response body bytes without
+JSON reserialization or newline normalization. For discovery pages, save only
+the first 153,600 bytes. When using Chrome, capture the network response body,
+not the rendered DOM, and wait for human interaction if a challenge appears.
+Do not save error/challenge pages as successful cases. If a sample disappears,
+find another public sample and update the source URL in its PHP data provider.
 
 Review changed markup before updating expectations, especially scripts, URL
 attributes, and PRE elements. Do not generate expected output by calling the
