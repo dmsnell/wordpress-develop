@@ -48,6 +48,7 @@ In a configured WordPress development test environment:
 
 ```sh
 npm run test:php -- --filter Tests_oEmbed_ProviderFixtures
+npm run test:php -- --filter Tests_oEmbed_ProviderFixtures_Integration
 npm run test:php -- --group oembed
 ```
 
@@ -57,6 +58,35 @@ Photo responses exercise `data2html()`. Rich/video responses exercise
 `_strip_newlines()` directly, without unrelated sanitization filters. The Reddit
 case additionally checks the original four links and one widget script.
 SoundCloud JSON and Canva XML additionally check the exact iframe source.
+
+`providerFixturesIntegration.php` replays representative captures through
+`get_html()` under normal WordPress bootstrap, including provider selection,
+discovery, response parsing, iframe titles, sanitization, and newline filtering.
+Its SoundCloud, Reddit, Canva XML, and WordPress discovery cases assert the
+ordered HTTP requests and reject unexpected requests. Response bodies come
+directly from the saved files; the tests do not contact providers.
+
+The Canva XML case simulates a JSON HTTP 501 to exercise WordPress's XML fallback.
+That status is test scaffolding, not a captured Canva rejection. The unchanged
+XML body came from Canva's discovered API endpoint and is replayed through its
+registered provider. The WordPress discovery case checks generated secrets
+structurally instead of comparing randomized HTML byte for byte.
+
+## Validation
+
+The existing direct-method fixture tests passed an isolated run of 75 tests and
+348 assertions. The integration cases require normal WordPress bootstrap and
+have not been executed locally; their results and the full oEmbed-group results
+are pending external CI. Local checks for these additions cover PHP syntax and
+PHPCS.
+
+A read-only comparison of PR base `05b0971dcc` and head `556eb6df8b` found matching
+tag sequences and key attributes across all 33 usable rich/video response
+fixtures. Eleven HTML outputs differ because the base deletes LF characters
+while the head replaces them with spaces. Discovery agrees for 34 of 35 pages;
+Flickr's endpoint improves by decoding numeric character references in query
+parameters. These direct-method results do not establish complete pipeline or
+JavaScript behavior.
 
 ## Refreshing
 
