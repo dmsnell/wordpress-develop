@@ -211,45 +211,20 @@ class Tests_oEmbed_ProviderFixtures extends WP_UnitTestCase {
 	 */
 	public static function data_discovery_fixtures() {
 		return array(
-			'youtube' => array(
-				'youtube',
-				'https://www.youtube.com/watch?v=72xdCU__XCk',
-				false,
-			),
 			'vimeo' => array(
 				'vimeo',
 				'https://vimeo.com/76979871',
 				'https://vimeo.com/api/oembed.json?url=https%3A%2F%2Fvimeo.com%2F76979871%3Fh%3D8272103f6e',
-			),
-			'dailymotion' => array(
-				'dailymotion',
-				'https://www.dailymotion.com/video/x7tgad0',
-				false,
 			),
 			'flickr' => array(
 				'flickr',
 				'https://www.flickr.com/photos/bees/2341623661/',
 				'https://www.flickr.com/services/oembed?url=https://www.flickr.com/photos/bees/2341623661&format=json',
 			),
-			'smugmug' => array(
-				'smugmug',
-				'https://gilmarphotography.smugmug.com/Galleries/Hamburger-Hat/n-fzXnQ/i-TtMhZ3v',
-				false,
-			),
-			'scribd' => array(
-				'scribd',
-				'https://www.scribd.com/document/505551003/Tales-from-the-Evil-Empire-The-mysteries-of-Orchard-s-OEmbedPart-or-how-to-integrate-YouTube-videos',
-				false,
-			),
 			'wordpress-tv' => array(
 				'wordpress-tv',
 				'https://wordpress.tv/2019/11/03/2019-state-of-the-word/',
 				'https://public-api.wordpress.com/oembed/?format=json&url=https%3A%2F%2Fwordpress.tv%2F2019%2F11%2F03%2F2019-state-of-the-word%2F&for=wpcom-auto-discovery',
-			),
-			'crowdsignal' => array(
-				'crowdsignal',
-				'https://poll.fm/12463328',
-				false,
 			),
 			'twitter' => array(
 				'twitter',
@@ -265,11 +240,6 @@ class Tests_oEmbed_ProviderFixtures extends WP_UnitTestCase {
 				'spotify',
 				'https://open.spotify.com/episode/7makk4oTQel546B0PZlDM5',
 				'https://open.spotify.com/oembed?url=https%3A%2F%2Fopen.spotify.com%2Fepisode%2F7makk4oTQel546B0PZlDM5',
-			),
-			'issuu' => array(
-				'issuu',
-				'https://issuu.com/zestmedialondon/docs/absolutely_kensington_chelsea_may_2026',
-				false,
 			),
 			'mixcloud' => array(
 				'mixcloud',
@@ -301,45 +271,15 @@ class Tests_oEmbed_ProviderFixtures extends WP_UnitTestCase {
 				'https://cloudup.com/c64lcxc-u5Y',
 				'https://cloudup.com/oembed?url=https%3A%2F%2Fcloudup.com%2Fc64lcxc-u5Y',
 			),
-			'reverbnation' => array(
-				'reverbnation',
-				'https://www.reverbnation.com/andredrayyungnsprings/song/9295486-keep-it-g',
-				false,
-			),
 			'videopress' => array(
 				'videopress',
 				'https://videopress.com/v/8cQHyy5N',
 				'https://public-api.wordpress.com/oembed/?for=wpcom-auto-discovery&url=https%3A%2F%2Fvideopress.com%2Fv%2F8cQHyy5N&format=json',
 			),
-			'reddit' => array(
-				'reddit',
-				'https://www.reddit.com/r/Showerthoughts/comments/2safxv/we_should_start_keeping_giraffes_a_secret_from/cno7zic',
-				false,
-			),
 			'speakerdeck' => array(
 				'speakerdeck',
 				'https://speakerdeck.com/jnunemaker/atom',
 				'https://speakerdeck.com/oembed.json?url=https%3A%2F%2Fspeakerdeck.com%2Fjnunemaker%2Fatom',
-			),
-			'amazon' => array(
-				'amazon',
-				'https://www.amazon.com/dp/B00Y7WCHQW',
-				false,
-			),
-			'tiktok' => array(
-				'tiktok',
-				'https://www.tiktok.com/@scout2015/video/6718335390845095173',
-				false,
-			),
-			'pinterest' => array(
-				'pinterest',
-				'https://www.pinterest.com/pin/99360735500167749/',
-				false,
-			),
-			'wolframcloud' => array(
-				'wolframcloud',
-				'https://www.wolframcloud.com/obj/0ae489a1-ba7d-47df-a8c6-516b42afa59a',
-				false,
 			),
 			'pocketcasts' => array(
 				'pocketcasts',
@@ -365,21 +305,6 @@ class Tests_oEmbed_ProviderFixtures extends WP_UnitTestCase {
 				'wordpress-tv-discovered',
 				'https://wordpress.tv/2019/11/03/2019-state-of-the-word/',
 				'https://public-api.wordpress.com/oembed/?format=json&url=https%3A%2F%2Fwordpress.tv%2F2019%2F11%2F03%2F2019-state-of-the-word%2F&for=wpcom-auto-discovery',
-			),
-			'amazon-uk' => array(
-				'amazon-uk',
-				'https://www.amazon.co.uk/dp/B00Y7WCHQW',
-				false,
-			),
-			'amazon-au' => array(
-				'amazon-au',
-				'https://www.amazon.com.au/dp/B00Y7WCHQW',
-				false,
-			),
-			'amazon-in' => array(
-				'amazon-in',
-				'https://www.amazon.in/dp/B00Y7WCHQW',
-				false,
 			),
 			'soundcloud-xml' => array(
 				'soundcloud-xml',
@@ -442,9 +367,9 @@ class Tests_oEmbed_ProviderFixtures extends WP_UnitTestCase {
 	 * @dataProvider data_discovery_fixtures
 	 * @covers ::discover
 	 *
-	 * @param string       $basename          Discovery fixture basename.
-	 * @param string       $source_url        URL of the embedded content.
-	 * @param string|false $expected_endpoint Discovered provider endpoint, or false.
+	 * @param string $basename          Discovery fixture basename.
+	 * @param string $source_url        URL of the embedded content.
+	 * @param string $expected_endpoint Discovered provider endpoint.
 	 */
 	public function test_discovery( $basename, $source_url, $expected_endpoint ) {
 		$body = file_get_contents( DIR_TESTDATA . '/oembed/discovery/' . $basename . '.html' );

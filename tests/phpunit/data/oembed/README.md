@@ -10,8 +10,9 @@ XML, discovered-endpoint, and regional examples.
   entities, scripts, and whitespace have not been edited. Photo responses retain
   their native fields rather than receiving an invented `html` field.
 - `discovery/` contains unchanged initial response bytes, limited to 153,600 bytes
-  as in `WP_oEmbed::discover()`. Captures may end in the middle of a token.
-  Successful page retrieval does not imply an available discovery link.
+  as in `WP_oEmbed::discover()`. Each captured prefix contains a usable discovery
+  endpoint before the head closes or body opens. Captures may end in the middle
+  of a later token.
 - `expected/` contains test expectations, not provider responses. For this
   corpus's rich/video HTML (none contains PRE elements), CR and LF become spaces;
   all other bytes are retained. Expectations were prepared independently of the
@@ -19,8 +20,9 @@ XML, discovered-endpoint, and regional examples.
   captured page's LINK attributes, stopping at HEAD closure or BODY opening.
 
 Successful cases use genuine provider content rather than challenge pages or
-unavailable-content notices. A genuine page may have no discovery endpoint,
-including when its discovery links fall beyond the response-size limit.
+unavailable-content notices. Discovery pages without a usable endpoint in the
+captured prefix are omitted; their provider responses remain available for
+response-processing coverage.
 
 SoundCloud's XML response is retained unchanged as a separately tested malformed
 response: its escaped CDATA markers become literal text around the iframe, so
@@ -74,19 +76,17 @@ structurally instead of comparing randomized HTML byte for byte.
 
 ## Validation
 
-The existing direct-method fixture tests passed an isolated run of 75 tests and
-348 assertions. The integration cases require normal WordPress bootstrap and
-have not been executed locally; their results and the full oEmbed-group results
-are pending external CI. Local checks for these additions cover PHP syntax and
-PHPCS.
+PHPUnit execution for the updated fixture suite and full oEmbed group is pending
+external CI. The integration cases require normal WordPress bootstrap and have
+not been executed locally. Local checks cover PHP syntax and PHPCS.
 
 A read-only comparison of PR base `05b0971dcc` and head `556eb6df8b` found matching
 tag sequences and key attributes across all 33 usable rich/video response
 fixtures. Eleven HTML outputs differ because the base deletes LF characters
-while the head replaces them with spaces. Discovery agrees for 34 of 35 pages;
-Flickr's endpoint improves by decoding numeric character references in query
-parameters. These direct-method results do not establish complete pipeline or
-JavaScript behavior.
+while the head replaces them with spaces. Discovery agrees for 19 of the 20
+retained pages; Flickr's endpoint improves by decoding numeric character
+references in query parameters. These direct-method results do not establish
+complete pipeline or JavaScript behavior.
 
 ## Refreshing
 
@@ -94,8 +94,10 @@ Refresh only intentionally. Use the source URLs in the PHP data providers to
 retrieve discovery pages and request their registered or discovered oEmbed
 endpoints. Follow redirects and save the original response body bytes without
 JSON reserialization or newline normalization. For discovery pages, save only
-the first 153,600 bytes. When using Chrome, capture the network response body,
-not the rendered DOM, and wait for human interaction if a challenge appears.
+the first 153,600 bytes and retain the page only if that prefix contains a usable
+endpoint before the head closes or body opens. When using Chrome, capture the
+network response body, not the rendered DOM, and wait for human interaction if a
+challenge appears.
 Do not save error/challenge pages as successful cases. If a sample disappears,
 find another public sample and update the source URL in its PHP data provider.
 
