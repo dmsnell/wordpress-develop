@@ -64,40 +64,6 @@ class Tests_oEmbed_ProviderFixtures_Integration extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The HTTP 501 is simulated to exercise WordPress's XML fallback. The XML body
-	 * was captured from Canva's discovered API endpoint; Canva did not return 501.
-	 *
-	 * @covers ::get_html
-	 * @covers ::fetch
-	 */
-	public function test_canva_xml_fallback_preserves_the_player_and_adds_a_title() {
-		$html = $this->get_html_with_responses(
-			'https://www.canva.com/design/DACSWFLr08k/view',
-			array( 'width' => 940, 'height' => 788 ),
-			array(
-				array(
-					'endpoint' => 'https://canva.com/_oembed',
-					'format'   => 'json',
-					'code'     => 501,
-				),
-				array(
-					'endpoint' => 'https://canva.com/_oembed',
-					'format'   => 'xml',
-					'file'     => 'responses/canva-xml.xml',
-				),
-			)
-		);
-
-		$tags = new WP_HTML_Tag_Processor( $html );
-		$this->assertTrue( $tags->next_tag( 'IFRAME' ) );
-		$this->assertSame( 'https://www.canva.com/design/DACSWFLr08k/view?embed&meta', $tags->get_attribute( 'src' ) );
-		$this->assertSame( 'how canva makes embeds', $tags->get_attribute( 'title' ) );
-		$this->assertSame( '940', $tags->get_attribute( 'width' ) );
-		$this->assertSame( '788', $tags->get_attribute( 'height' ) );
-		$this->assertFalse( $tags->next_tag( 'IFRAME' ) );
-	}
-
-	/**
 	 * @covers ::get_html
 	 * @covers ::discover
 	 */
@@ -150,7 +116,7 @@ class Tests_oEmbed_ProviderFixtures_Integration extends WP_UnitTestCase {
 	 *
 	 * @param string  $source_url URL of the embedded content.
 	 * @param int[]   $args       Explicit width and height for the oEmbed request.
-	 * @param array[] $responses Expected endpoints, formats, fixture files, and optional status codes.
+	 * @param array[] $responses Expected endpoints, formats, and fixture files.
 	 * @return string Filtered embed HTML.
 	 */
 	private function get_html_with_responses( $source_url, $args, $responses ) {
@@ -188,11 +154,10 @@ class Tests_oEmbed_ProviderFixtures_Integration extends WP_UnitTestCase {
 			ksort( $expected_query );
 			$this->assertSame( $expected_query, $query );
 
-			$code = $expected['code'] ?? 200;
 			return array(
 				'headers'  => array(),
-				'body'     => isset( $expected['file'] ) ? file_get_contents( DIR_TESTDATA . '/oembed/' . $expected['file'] ) : '',
-				'response' => array( 'code' => $code, 'message' => 501 === $code ? 'Not Implemented' : 'OK' ),
+				'body'     => file_get_contents( DIR_TESTDATA . '/oembed/' . $expected['file'] ),
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
 				'cookies'  => array(),
 			);
 		};

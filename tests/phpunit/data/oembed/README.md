@@ -25,8 +25,14 @@ captured prefix are omitted; their provider responses remain available for
 response-processing coverage.
 
 SoundCloud's XML response is retained unchanged as a separately tested malformed
-response: its escaped CDATA markers become literal text around the iframe, so
-HTML parsing finds no iframe. It is excluded from successful response cases.
+embed. The XML document is well formed, but the `html` value contains escaped
+CDATA delimiters (`&lt;![CDATA[` and `]]&gt;`). XML parsing turns those into literal
+`<![CDATA[` and `]]>` text around the iframe instead of interpreting them as XML
+syntax. In ordinary HTML, the opening delimiter starts a bogus comment that
+consumes the iframe's opening tag, so no iframe element is created. The test
+checks that `_strip_newlines()` preserves this value and that the HTML tag
+processor finds no iframe; it does not expect WordPress to repair the provider's
+markup. This fixture is excluded from successful response cases.
 SoundCloud JSON and Canva XML provide valid iframe examples. The SoundCloud JSON
 sample, "Hobnotropic" by matas petrikas, was also played in an iframe in Chrome.
 Canva's discovery page is omitted because its browser verification could not be
@@ -64,15 +70,14 @@ SoundCloud JSON and Canva XML additionally check the exact iframe source.
 `providerFixturesIntegration.php` replays representative captures through
 `get_html()` under normal WordPress bootstrap, including provider selection,
 discovery, response parsing, iframe titles, sanitization, and newline filtering.
-Its SoundCloud, Reddit, Canva XML, and WordPress discovery cases assert the
+Its SoundCloud JSON, Reddit, and WordPress discovery cases assert the
 ordered HTTP requests and reject unexpected requests. Response bodies come
 directly from the saved files; the tests do not contact providers.
 
-The Canva XML case simulates a JSON HTTP 501 to exercise WordPress's XML fallback.
-That status is test scaffolding, not a captured Canva rejection. The unchanged
-XML body came from Canva's discovered API endpoint and is replayed through its
-registered provider. The WordPress discovery case checks generated secrets
-structurally instead of comparing randomized HTML byte for byte.
+The WordPress discovery case checks generated secrets structurally instead of
+comparing randomized HTML byte for byte. Canva XML remains covered by the direct
+newline-filter and iframe assertions; these cases do not exercise HTTP fallback
+or WordPress's XML response parser.
 
 ## Validation
 
